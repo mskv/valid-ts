@@ -13,43 +13,44 @@ type ScalarErrMessage = string;
 interface ObjErrMessage { [key: string]: ErrMessage[]; }
 
 interface Validator<I, O> {
+  __i: I;
   __o: O;
   (input: I): Result<O>;
 }
 
-const createValidator = <I, O>(fn: (input: I) => Result<O>) => fn as Validator<I, O>;
+const validator = <I, O>(fn: (input: I) => Result<O>) => fn as Validator<I, O>;
 
-const number = createValidator<any, number>((input) =>
+const number = validator<any, number>((input) =>
   typeof input === "number"
     ? { result: "ok", value: input }
     : { result: "error", messages: ["not_number"] },
 );
 
-const nullable = createValidator<any, null>((input) =>
+const nullable = validator<any, null>((input) =>
   input === null
     ? { result: "ok", value: input }
     : { result: "error", messages: ["not_null"] },
 );
 
-const optional = createValidator<any, undefined>((input) =>
+const optional = validator<any, undefined>((input) =>
   input === undefined
     ? { result: "ok", value: input }
     : { result: "error", messages: ["not_undefined"] },
 );
 
-const string = createValidator<any, string>((input) =>
+const string = validator<any, string>((input) =>
   typeof input === "string"
     ? { result: "ok", value: input }
     : { result: "error", messages: ["not_string"] },
 );
 
-const gt1 = createValidator<number, number>((input) =>
+const gt1 = validator<number, number>((input) =>
   input > 1
     ? { result: "ok", value: input }
     : { result: "error", messages: ["not_gt1"] },
 );
 
-const array = <I, O>(inner: Validator<I, O>) => createValidator<I[], O[]>((input) => {
+const array = <I, O>(inner: Validator<I, O>) => validator<I[], O[]>((input) => {
   if (!Array.isArray(input)) { return { result: "error", messages: ["not_array"] }; }
 
   const validations = input.map(inner);
@@ -72,26 +73,24 @@ const array = <I, O>(inner: Validator<I, O>) => createValidator<I[], O[]>((input
   }
 });
 
-type Or = <I, O1, O2>(v1: Validator<I, O1>, v2: Validator<I, O2>) => Validator<I, O1 | O2>;
-const or: Or = (v1, v2) => createValidator((input) => {
+const or = <I, O1, O2>(v1: Validator<I, O1>, v2: Validator<I, O2>) => validator<I, O1 | O2>((input) => {
   const val1 = v1(input);
-  if (val1.result === "ok") { return val1 as Ok<typeof v1.__o | typeof v2.__o>; }
+  if (val1.result === "ok") { return val1; }
 
   const val2 = v2(input);
-  if (val2.result === "ok") { return val2 as Ok<typeof v1.__o | typeof v2.__o>; }
+  if (val2.result === "ok") { return val2; }
 
   return { result: "error", messages: val1.messages.concat(val2.messages) };
 });
 
-type And = <I, O1, O2 extends O1>(v1: Validator<I, O1>, v2: Validator<I, O2>) => Validator<I, O1 & O2>;
-const and: And = (v1, v2) => createValidator((input) => {
+const and = <I, O1, O2 extends O1>(v1: Validator<I, O1>, v2: Validator<I, O2>) => validator<I, O1 & O2>((input) => {
   const val1 = v1(input);
   if (val1.result === "error") { return val1; }
 
   const val2 = v2(input);
   if (val2.result === "error") { return val2; }
 
-  return { result: "ok", value: input as any as typeof v1.__o & typeof v2.__o };
+  return { result: "ok", value: input as any };
 });
 
 const orValidator = or(array(or(nullable, number)), nullable);
