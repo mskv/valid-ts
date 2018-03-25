@@ -1,10 +1,3 @@
-function returnType<T>(_fn: (...args: any[]) => T): T { return null!; }
-
-type Primitive = string | number | boolean;
-type Nullable<T> = T | null;
-type Optional<T> = T | undefined;
-type NOPrimitive = Nullable<Optional<Primitive>>;
-
 type Result<T> = Ok<T> | Err;
 type Ok<T> = { result: "ok", value: T };
 type Err = { result: "error", messages: ErrMessage[] };
@@ -134,38 +127,3 @@ const and = <I, O1, O2 extends O1>(v1: Validator<I, O1>, v2: Validator<I, O2>) =
 
   return { result: "ok", value: input as any };
 });
-
-const objValidator = object({
-  f1: number,
-  f2: or(string, optional),
-  f3: or(string, nullable),
-  f4: and(number, gt1),
-  f5: object({
-    f1: or(array(or(string, nullable)), optional),
-  }),
-});
-const objValidation = objValidator({ f5: {}, f1: 1, f2: "1", f3: null, f4: 2 });
-if (objValidation.result === "ok") {
-  console.log("OBJ ok", objValidation.value);
-}
-if (objValidation.result === "error") {
-  console.log("OBJ error", objValidation.messages);
-}
-
-const orValidator = or(array(or(nullable, number)), nullable);
-const orValidation = orValidator([1, null, 1, "1", 1]);
-if (orValidation.result === "ok") {
-  console.log("OR ok", orValidation.value);
-}
-if (orValidation.result === "error") {
-  console.log("OR error", orValidation.messages);
-}
-
-const andValidator = array(and(number, gt1));
-const andValidation = andValidator([2, 3, 2]);
-if (andValidation.result === "ok") {
-  console.log("AND ok", andValidation.value);
-}
-if (andValidation.result === "error") {
-  console.log("AND error", andValidation.messages);
-}
