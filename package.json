@@ -1,0 +1,15 @@
+{
+  "name": "pindol",
+  "version": "0.0.1",
+  "scripts": {
+    "lint": "tslint './src/**/*.ts'"
+  },
+  "author": "Michał Podwórny",
+  "license": "ISC",
+  "devDependencies": {
+    "ts-node": "^5.0.1",
+    "tslint": "^5.9.1",
+    "typescript": "^2.7.2"
+  },
+  "dependencies": {}
+}
