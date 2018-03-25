@@ -6,17 +6,19 @@ type Optional<T> = T | undefined;
 type NOPrimitive = Nullable<Optional<Primitive>>;
 
 type Result<T> = Ok<T> | Err;
-interface Ok<T> { result: "ok"; value: T; }
-interface Err { result: "error"; messages: ErrMessage[]; }
+type Ok<T> = { result: "ok", value: T };
+type Err = { result: "error", messages: ErrMessage[] };
 type ErrMessage = ScalarErrMessage | ObjErrMessage;
 type ScalarErrMessage = string;
-interface ObjErrMessage { [key: string]: ErrMessage[]; }
+type ObjErrMessage = { [key: string]: ErrMessage[] };
 
-interface Validator<I, O> {
-  __i: I;
-  __o: O;
-  (input: I): Result<O>;
-}
+type Validator<I, O> = {
+  __i: I,
+  __o: O,
+  (input: I): Result<O>,
+};
+
+type AnyValidator = Validator<any, any>;
 
 const validator = <I, O>(fn: (input: I) => Result<O>) => fn as Validator<I, O>;
 
@@ -49,6 +51,46 @@ const gt1 = validator<number, number>((input) =>
     ? { result: "ok", value: input }
     : { result: "error", messages: ["not_gt1"] },
 );
+
+type Schema = { [field: string]: AnyValidator };
+type GetObjectOutput<S extends Schema> = {
+  [K in keyof S]: S[K]["__o"]
+};
+
+const object = <S extends Schema>(schema: S) => validator<any, GetObjectOutput<S>>((input) => {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    return { result: "error", messages: ["not_object"] };
+  }
+
+  const schemaKeys = Object.keys(schema);
+  const inputKeys = Object.keys(input);
+
+  if (inputKeys.some((inputKey) => !schemaKeys.some((schemaKey) => schemaKey === inputKey))) {
+    return { result: "error", messages: ["contains_excessive_keys"] };
+  }
+
+  const [hasFailure, objErrMessage]: [boolean, ObjErrMessage] =
+    schemaKeys.reduce<[boolean, ObjErrMessage]>((acc, schemaKey) => {
+      const validator = schema[schemaKey];
+      const inputValue = input[schemaKey];
+
+      const validation = validator(inputValue);
+
+      if (validation.result === "error") {
+        const objErrMessage = acc[1];
+        objErrMessage[schemaKey] = validation.messages;
+        return [true, objErrMessage];
+      } else {
+        return acc;
+      }
+    }, [false, {}]);
+
+  if (hasFailure) {
+    return { result: "error", messages: [objErrMessage] };
+  } else {
+    return { result: "ok", value: input as any };
+  }
+});
 
 const array = <I, O>(inner: Validator<I, O>) => validator<I[], O[]>((input) => {
   if (!Array.isArray(input)) { return { result: "error", messages: ["not_array"] }; }
@@ -92,6 +134,23 @@ const and = <I, O1, O2 extends O1>(v1: Validator<I, O1>, v2: Validator<I, O2>) =
 
   return { result: "ok", value: input as any };
 });
+
+const objValidator = object({
+  f1: number,
+  f2: or(string, optional),
+  f3: or(string, nullable),
+  f4: and(number, gt1),
+  f5: object({
+    f1: or(array(or(string, nullable)), optional),
+  }),
+});
+const objValidation = objValidator({ f5: {}, f1: 1, f2: "1", f3: null, f4: 2 });
+if (objValidation.result === "ok") {
+  console.log("OBJ ok", objValidation.value);
+}
+if (objValidation.result === "error") {
+  console.log("OBJ error", objValidation.messages);
+}
 
 const orValidator = or(array(or(nullable, number)), nullable);
 const orValidation = orValidator([1, null, 1, "1", 1]);
