@@ -1,18 +1,16 @@
 {
-  "name": "pindol",
-  "version": "0.0.4",
+  "name": "valid-ts",
+  "version": "0.0.1",
   "description": "Simple TypeScript validation library with a declarative interface",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mskv/pindol.git"
+    "url": "git+https://github.com/mskv/valid-ts.git"
   },
   "keywords": [],
   "author": "Michał Podwórny",
   "license": "MIT",
-
   "main": "dist/index.js",
-  "types" : "dist/index.d.ts",
-
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "lint": "tslint './src/**/*.ts'",

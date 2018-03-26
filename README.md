@@ -1,12 +1,12 @@
-# Pindol
+# Valid-ts
 
-[npm package](https://www.npmjs.com/package/pindol)
+[npm package](https://www.npmjs.com/package/valid-ts)
 
 It's a very simple validation library without dependencies written in TypeScript. Useful for counstructing validation functions with a declarative interface. They are generally supposed to accept any input, ensure its shape during runtime and return typed values.
 
 ## Installation:
 
-`npm install pindol`
+`npm install valid-ts`
 
 ## API
 
@@ -31,7 +31,7 @@ You can expect `value: T` to be inferred from the validator definition.
 `number`, `string`, `optional`, `nullable`
 
 ```
-import { number, string, optional, nullable } from "pindol"
+import { number, string, optional, nullable } from "valid-ts"
 
 const validation1 = number(1)
 // => { result: "ok", value: 1 }
@@ -51,7 +51,7 @@ const validation4 = nullable(1)
 `array`
 
 ```
-import { array, number } from "pindol"
+import { array, number } from "valid-ts"
 
 const validator = array(number)
 
@@ -73,7 +73,7 @@ const validation4 = validator([1, 2, 3, 4])
 `object`
 
 ```
-import { object, number, string, array } from "pindol"
+import { object, number, string, array } from "valid-ts"
 
 const validator = object({
   f1: number,
@@ -99,7 +99,7 @@ const validation4 = validator({ f1: 1, f3: [1, 2] })
 `validator`
 
 ```
-import { validator } from "pindol"
+import { validator } from "valid-ts"
 
 const greaterThan1 = validator<number, number>((input) =>
   input > 1
@@ -165,7 +165,7 @@ const andValidation2 = andValidator(1)
 ### More examples
 
 ```
-import { object, string, array, or, and } from "pindol"
+import { object, string, array, or, and } from "valid-ts"
 import { email, tag } from "./my_validators"
 
 const user = object({
