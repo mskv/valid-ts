@@ -56,8 +56,8 @@ export const object = <S extends Schema>(schema: S) => validator<any, GetObjectO
     return { result: "error", messages: ["contains_excessive_keys"] };
   }
 
-  const [hasFailure, objErrMessage]: [boolean, ObjErrMessage] =
-    schemaKeys.reduce<[boolean, ObjErrMessage]>((acc, schemaKey) => {
+  const [hasFailure, objErrMessage, sanitizedValue]: [boolean, ObjErrMessage, GetObjectOutput<S>] =
+    schemaKeys.reduce<[boolean, ObjErrMessage, GetObjectOutput<S>]>((acc, schemaKey) => {
       const validator = schema[schemaKey];
       const inputValue = input[schemaKey];
 
@@ -66,16 +66,18 @@ export const object = <S extends Schema>(schema: S) => validator<any, GetObjectO
       if (validation.result === "error") {
         const objErrMessage = acc[1];
         objErrMessage[schemaKey] = validation.messages;
-        return [true, objErrMessage];
+        return [true, objErrMessage, acc[2]];
       } else {
-        return acc;
+        const sanitizedValue = acc[2];
+        if (validation.value !== undefined) { sanitizedValue[schemaKey] = validation.value; }
+        return [acc[0], acc[1], sanitizedValue];
       }
-    }, [false, {}]);
+    }, [false, {}, ({} as any)]);
 
   if (hasFailure) {
     return { result: "error", messages: [objErrMessage] };
   } else {
-    return { result: "ok", value: input as any };
+    return { result: "ok", value: sanitizedValue };
   }
 });
 
