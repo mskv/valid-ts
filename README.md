@@ -185,3 +185,17 @@ const input = {
 
 const validation = user(input)
 ```
+
+### TODO
+
+1. Type errors.
+
+2. Add `not`.
+
+3. Add `rules` to `object` - predicates spanning multiple fields.
+
+4. Add documentation.
+
+5. Add specs.
+
+6. Make `or` and `and` variadic.
