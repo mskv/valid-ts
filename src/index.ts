@@ -39,8 +39,8 @@ export const string = validator<any, string>((input) =>
     : { result: "error", messages: ["not_string"] },
 );
 
-type Schema = { [field: string]: AnyValidator };
-type GetObjectOutput<S extends Schema> = {
+export type Schema = { [field: string]: AnyValidator };
+export type GetObjectOutput<S extends Schema> = {
   [K in keyof S]: S[K]["__o"]
 };
 

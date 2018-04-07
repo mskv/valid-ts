@@ -1,6 +1,6 @@
 {
   "name": "valid-ts",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Simple TypeScript validation library with a declarative interface",
   "repository": {
     "type": "git",
