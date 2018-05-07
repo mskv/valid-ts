@@ -78,14 +78,14 @@ const validation4 = validator([1, 2, 3, 4])
 // => { result: "ok", value: [1, 2, 3, 4] }] }
 ```
 
-### Object
+### Shape
 
-`object`
+`shape`
 
 ```
-import { object, number, string, array } from "valid-ts"
+import { shape, number, string, array } from "valid-ts"
 
-const validator = object({
+const validator = shape({
   f1: number,
   f2: optional,
   f3: array(string),
@@ -120,6 +120,37 @@ const validation3 = validator({ f1: 1, f3: [1, "2"] })
 
 const validation4 = validator({ f1: 1, f3: [1, 2] })
 // => { result: "ok", value: { f1: 1, f3: [1, 2] } }
+```
+
+### Dict
+
+`dict`
+
+```
+import { dict, number } from "valid-ts"
+
+const validator = dict(number)
+
+const validation1 = validator(1)
+// => { result: "error", message: { error: "not_object", meta: undefined } }
+
+const validation2 = validator({})
+// => { result: "ok", value: {} }
+
+const validation3 = validator({ f1: 1, f2: "2", f3: 3, f4: "4" })
+// => {
+//      result: "error",
+//      message: {
+//        error: "invalid_values",
+//        meta: {
+//          "f1": { error: "not_number", meta: undefined },
+//          "f3": { error: "not_number", meta: undefined },
+//        }
+//      }
+//    }
+
+const validation4 = validator({ f1: 1, f2: 2, f3: 3, f4: 4 })
+// => { result: "ok", value: { f1: 1, f2: 2, f3: 3, f4: 4 } }] }
 ```
 
 ### Custom validators
@@ -208,13 +239,13 @@ const andValidation2 = andValidator(1)
 ### More examples
 
 ```
-import { object, string, array, or, and } from "valid-ts"
+import { shape, string, array, or, and } from "valid-ts"
 import { email, tag } from "./my_validators"
 
-const user = object({
+const user = shape({
   name: string,
   email: or(email, optional),
-  address: or(object({
+  address: or(shape({
     zip: string,
     city: string,
   }), optional),
@@ -235,7 +266,7 @@ const validation = user(input)
 
 2. Add `not`.
 
-3. Add `rules` to `object` - predicates spanning multiple fields.
+3. Add `rules` to `shape` - predicates spanning multiple fields.
 
 4. Add documentation.
 
@@ -246,3 +277,7 @@ const validation = user(input)
 7. Make the `Result` type composable.
 
 8. Include coercion.
+
+9. ~~Add `dict`.~~
+
+10. Add `any`, `oneOf(v)`.
