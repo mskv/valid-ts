@@ -40,14 +40,14 @@ export const string = validator<any, string, ErrMessage<"not_string", undefined>
 );
 
 export type Schema = { [field: string]: AnyValidator };
-export type GetObjectOutput<S extends Schema> = { [K in keyof S]: S[K]["__o"] };
-export type GetObjectErrMeta<S extends Schema> = { [K in keyof S]?: S[K]["__m"] };
+export type GetShapeOutput<S extends Schema> = { [K in keyof S]: S[K]["__o"] };
+export type GetShapeErrMeta<S extends Schema> = { [K in keyof S]?: S[K]["__m"] };
 
-export const object = <S extends Schema>(schema: S) =>
+export const shape = <S extends Schema>(schema: S) =>
   validator<
     any,
-    GetObjectOutput<S>,
-    (ErrMessage<"not_object", undefined> | ErrMessage<"invalid_shape", GetObjectErrMeta<S>>)
+    GetShapeOutput<S>,
+    (ErrMessage<"not_object", undefined> | ErrMessage<"invalid_shape", GetShapeErrMeta<S>>)
   >((input) => {
     if (typeof input !== "object" || input === null || Array.isArray(input)) {
       return { result: "error", message: { error: "not_object", meta: undefined } };
@@ -55,8 +55,8 @@ export const object = <S extends Schema>(schema: S) =>
 
     const schemaKeys = Object.keys(schema);
 
-    const [hasFailure, invalidShapeMeta, sanitizedValue]: [boolean, GetObjectErrMeta<S>, GetObjectOutput<S>] =
-      schemaKeys.reduce<[boolean, GetObjectErrMeta<S>, GetObjectOutput<S>]>((acc, schemaKey) => {
+    const [hasFailure, invalidShapeMeta, sanitizedValue] =
+      schemaKeys.reduce<[boolean, GetShapeErrMeta<S>, GetShapeOutput<S>]>((acc, schemaKey) => {
         const fieldValidator = schema[schemaKey];
         const fieldValue = input[schemaKey];
 
@@ -75,6 +75,46 @@ export const object = <S extends Schema>(schema: S) =>
 
     if (hasFailure) {
       return { result: "error", message: { error: "invalid_shape", meta: invalidShapeMeta } };
+    } else {
+      return { result: "ok", value: sanitizedValue };
+    }
+  });
+
+export const dict = <
+  I,
+  O,
+  M extends AnyErrMessage,
+>(inner: Validator<I, O, M>) =>
+  validator<
+    any,
+    { [key: string]: O },
+    (ErrMessage<"not_object", undefined> | ErrMessage<"invalid_values", { [key: string]: M }>)
+  >((input) => {
+    if (typeof input !== "object" || input === null || Array.isArray(input)) {
+      return { result: "error", message: { error: "not_object", meta: undefined } };
+    }
+
+    const dictKeys = Object.keys(input);
+
+    const [hasFailure, invalidValuesMeta, sanitizedValue] =
+      dictKeys.reduce<[boolean, { [key: string]: M }, { [key: string]: O }]>((acc, dictKey) => {
+        const dictValue = input[dictKey];
+
+        const validation = inner(dictValue);
+
+        if (validation.result === "error") {
+          const invalidValuesMeta = acc[1];
+          invalidValuesMeta[dictKey] = validation.message;
+          return [true, invalidValuesMeta, acc[2]];
+        } else {
+          const sanitizedValue = acc[2];
+          if (validation.value !== undefined) { sanitizedValue[dictKey] = validation.value; }
+          return [acc[0], acc[1], sanitizedValue];
+        }
+      }, [false, ({} as any), ({} as any)]);
+
+    if (hasFailure) {
+      return { result: "error", message: { error: "invalid_values", meta: invalidValuesMeta } };
     } else {
       return { result: "ok", value: sanitizedValue };
     }
