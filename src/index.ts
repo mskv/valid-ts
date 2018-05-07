@@ -15,6 +15,8 @@ export type AnyValidator = Validator<any, any, any>;
 export const validator = <I, O, M extends AnyErrMessage>(fn: (input: I) => Result<O, M>) =>
   fn as Validator<I, O, M>;
 
+export const any = validator<any, any, any>((input) => ({ result: "ok", value: input }));
+
 export const number = validator<any, number, ErrMessage<"not_number", undefined>>((input) =>
   typeof input === "number"
     ? { result: "ok", value: input }
