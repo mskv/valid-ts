@@ -153,6 +153,25 @@ const validation4 = validator({ f1: 1, f2: 2, f3: 3, f4: 4 })
 // => { result: "ok", value: { f1: 1, f2: 2, f3: 3, f4: 4 } }] }
 ```
 
+### Any
+
+`any`
+
+```
+import { array, any } from "valid-ts"
+
+const validator = array(any)
+
+const validation1 = validator(1)
+// => { result: "error", message: { error: "not_array", meta: undefined } }
+
+const validation2 = validator([])
+// => { result: "ok", value: [] }
+
+const validation3 = validator([1, "2", 3, "4"])
+// => { result: "ok", value: [1, "2", 3, "4"] }] }
+```
+
 ### Custom validators
 
 `validator`
@@ -280,4 +299,6 @@ const validation = user(input)
 
 9. ~~Add `dict`.~~
 
-10. Add `any`, `oneOf(v)`.
+10. ~~Add `any`.~~
+
+11. Add `oneOf(v)`.
