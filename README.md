@@ -177,12 +177,10 @@ const validation3 = validator([1, "2", 3, "4"])
 `validator`
 
 ```
-import { validator } from "valid-ts"
+import { validator, ok, err } from "valid-ts"
 
 const greaterThan1 = validator<number, number, ErrMessage<"not_greater_than_1", { actual: number }>>((input) =>
-  input > 1
-    ? { result: "ok", value: input }
-    : { result: "error", message: { error: "not_greater_than_1", meta: { actual: input } } },
+  input > 1 ? ok(input) : err("not_greater_than_1", { actual: input }),
 );
 
 const validation1 = greaterThan1(1)
@@ -200,12 +198,10 @@ const validation3 = greaterThan1("1")
 `and`, `or`
 
 ```
-import { validator, and, or, number, nullable, array }
+import { validator, and, or, number, nullable, array, ok, err } from "valid-ts"
 
 const greaterThan1 = validator<number, number, ErrMessage<"not_greater_than_1", { actual: number }>>((input) =>
-  input > 1
-    ? { result: "ok", value: input }
-    : { result: "error", message: { error: "not_greater_than_1", meta: { actual: input } } },
+  input > 1 ? ok(input) : err("not_greater_than_1", { actual: input }),
 );
 
 // OR
