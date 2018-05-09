@@ -30,15 +30,11 @@ export class Result<O, E> {
   public mapOk<O2>(okFn: (ok: O) => O2): Result<O2, E> { return this.bimap(okFn, id); }
   public mapErr<E2>(errFn: (err: E) => E2): Result<O, E2> { return this.bimap(id, errFn); }
 
-  // TODO: Figure out if this is acceptable
-  public bibind<O2, E2>(okFn: (ok: O) => Result<O2, E>, errFn: (err: E) => Result<O, E2>): Result<O2, E2> {
-    return this.innerResult.kind === "Err" ? errFn(this.innerResult.value) : okFn(this.innerResult.value) as any;
+  public either<O2, E2>(okFn: (ok: O) => O2, errFn: (err: E) => E2): O2 | E2 {
+    return this.innerResult.kind === "Err" ? errFn(this.innerResult.value) : okFn(this.innerResult.value);
   }
-  public bindOk<O2>(okFn: (ok: O) => Result<O2, E>): Result<O2, E> { return this.bibind(okFn, Result.err); }
-  public bindErr<E2>(errFn: (err: E) => Result<O, E2>): Result<O, E2> { return this.bibind(Result.ok, errFn); }
-
   public match<O2, E2>({ Ok, Err }: { Ok: (ok: O) => O2, Err: (err: E) => E2 }): O2 | E2 {
-    return this.innerResult.kind === "Err" ? Err(this.innerResult.value) : Ok(this.innerResult.value);
+    return this.either(Ok, Err);
   }
   public unwrap(): InnerResult<O, E> { return this.innerResult; }
 }
@@ -184,14 +180,19 @@ export function or<I, O1, E1, O2, E2, O3, E3, O4, E4, O5, E5, O6, E6>(v1: Valida
 export function or(...vs: AnyValidator[]): AnyValidator {
   if (vs.length < 2) { throw new Error("Expected at least 2 arguments"); }
 
+  const v1 = vs[0];
+  const vRest = vs.slice(1);
+
   return validator((input) =>
-    vs.reduce((result, v) =>
-      result.bindErr(
-        (resultErr) => v(input).bindErr(
+    vRest.reduce((result, v) =>
+      result.either(
+        Result.ok,
+        (resultErr) => v(input).either(
+          Result.ok,
           (vErr) => { resultErr.meta.push(vErr); return Result.err(resultErr); },
         ),
       )
-    , Result.err(errWithMeta("none_passed", [] as any[]))),
+    , v1(input)),
   );
 }
 
