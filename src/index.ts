@@ -22,6 +22,23 @@ export class Result<O, E> {
     return this.innerResult.kind === "Err" ? this as any : fn(this.innerResult.value);
   }
 
+  public bimap<O2, E2>(okFn: (ok: O) => O2, errFn: (err: E) => E2): Result<O2, E2> {
+    return this.innerResult.kind === "Err"
+      ? Result.err(errFn(this.innerResult.value))
+      : Result.ok(okFn(this.innerResult.value));
+  }
+  public mapOk<O2>(okFn: (ok: O) => O2): Result<O2, E> { return this.bimap(okFn, id); }
+  public mapErr<E2>(errFn: (err: E) => E2): Result<O, E2> { return this.bimap(id, errFn); }
+
+  public bibind<O2, E2>(okFn: (ok: O) => Result<O2, E>, errFn: (err: E) => Result<O, E2>): Result<O2, E2> {
+    return this.innerResult.kind === "Err" ? errFn(this.innerResult.value) : okFn(this.innerResult.value) as any;
+  }
+  public bindOk<O2>(okFn: (ok: O) => Result<O2, E>): Result<O2, E> { return this.bibind(okFn, Result.err); }
+  public bindErr<E2>(errFn: (err: E) => Result<O, E2>): Result<O, E2> { return this.bibind(Result.ok, errFn); }
+
+  public match<O2, E2>({ Ok, Err }: { Ok: (ok: O) => O2, Err: (err: E) => E2 }): O2 | E2 {
+    return this.innerResult.kind === "Err" ? Err(this.innerResult.value) : Ok(this.innerResult.value);
+  }
   public unwrap(): InnerResult<O, E> { return this.innerResult; }
 }
 
@@ -37,11 +54,11 @@ export type Validator<I, O, E> = {
 
   (input: I): Result<O, E>,
 };
-
 export type AnyValidator = Validator<any, any, any>;
 
-export const validator = <I, O, E>(fn: (input: I) => Result<O, E>) =>
-  fn as Validator<I, O, E>;
+export const validator = <I, O, E>(fn: (input: I) => Result<O, E>) => fn as Validator<I, O, E>;
+
+export const id = <T>(value: T) => value;
 
 export const any = validator<any, any, any>((input) => Result.ok(input));
 
@@ -164,49 +181,18 @@ export const array = <
     return hasFailure ? Result.err(errWithMeta("invalid_members", invalidMembersMeta)) : Result.ok(sanitizedValues);
   });
 
-export const or = <
-  I,
-  O1,
-  E1,
-  O2,
-  E2,
->(
+export const or = <I, O1, E1, O2, E2>(
   v1: Validator<I, O1, E1>, v2: Validator<I, O2, E2>,
-) =>
-  validator<
-    I,
-    (O1 | O2),
-    ErrWithMeta<"none_passed", Array<E1 | E2>>
-  >((input) => {
-    const val1 = v1(input).unwrap();
-    if (val1.kind === "Ok") { return Result.ok(val1.value); }
+) => validator<I, (O1 | O2), ErrWithMeta<"none_passed", Array<E1 | E2>>>((input) =>
+  [v1, v2].reduce<Result<O1 | O2, ErrWithMeta<"none_passed", Array<E1 | E2>>>>((result, v) =>
+    result.bindErr(
+      (resultErr) => (v(input) as Result<O1 | O2, E1 | E2>).bindErr(
+        (vErr) => { resultErr.meta.push(vErr); return Result.err(resultErr); },
+      ),
+    )
+  , Result.err(errWithMeta("none_passed", []))),
+);
 
-    const val2 = v2(input).unwrap();
-    if (val2.kind === "Ok") { return Result.ok(val2.value); }
-
-    return Result.err(errWithMeta("none_passed", [val1.value, val2.value]));
-  });
-
-export const and = <
-  I1,
-  O1,
-  E1,
-  I2 extends O1,
-  O2 extends O1,
-  E2,
->(
+export const and = <I1, O1 extends I2, E1, I2, O2 extends O1, E2>(
   v1: Validator<I1, O1, E1>, v2: Validator<I2, O2, E2>,
-) =>
-  validator<
-    I1,
-    O1 & O2,
-    E1 | E2
-  >((input) => {
-    const val1 = v1(input).unwrap();
-    if (val1.kind === "Err") { return Result.err(val1.value); }
-
-    const val2 = v2(val1.value as any).unwrap();
-    if (val2.kind === "Err") { return Result.err(val2.value); }
-
-    return Result.ok(val2.value);
-  });
+) => validator<I1, O2, E1 | E2>((input) => v1(input).bind(v2));
