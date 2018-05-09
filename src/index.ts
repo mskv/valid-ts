@@ -1,53 +1,79 @@
-export type Result<T, M extends AnyErrMessage> = Ok<T> | Err<M>;
-export type Ok<T> = { result: "ok", value: T };
-export type Err<M extends AnyErrMessage> = { result: "error", message: M };
-export type ErrMessage<E extends string, M> = { error: E, meta: M };
-export type AnyErrMessage = ErrMessage<any, any>;
+export class Result<O, E> {
+  // static aliases
+  public static of = Result.ok;
 
-export type Validator<I, O, M extends AnyErrMessage> = {
-  __i: I, __o: O, __m: M,
+  public static ok<O, E>(ok: O) { return new Result<O, E>({ kind: "Ok", value: ok }); }
+  public static err<O, E>(err: E) { return new Result<O, E>({ kind: "Err", value: err }); }
 
-  (input: I): Result<O, M>,
+  // instance aliases
+  public map = this.fmap;
+  public chain = this.bind;
+
+  private innerResult: InnerResult<O, E>;
+  constructor(innerResult: InnerResult<O, E>) { this.innerResult = innerResult; }
+
+  public fmap<O2>(fn: (ok: O) => O2): Result<O2, E> {
+    return this.innerResult.kind === "Err" ? this as any : Result.ok(fn(this.innerResult.value));
+  }
+  public ap<O2>(result: Result<(ok: O) => O2, E>): Result<O2, E> {
+    return this.innerResult.kind === "Err" ? this as any : result.fmap((fn) => fn((this.innerResult as Ok<O>).value));
+  }
+  public bind<O2, E2>(fn: (ok: O) => Result<O2, E2>): Result<O2, E | E2> {
+    return this.innerResult.kind === "Err" ? this as any : fn(this.innerResult.value);
+  }
+
+  public unwrap(): InnerResult<O, E> { return this.innerResult; }
+}
+
+export type InnerResult<O, E> = Ok<O> | Err<E>;
+export type Ok<O> = { kind: "Ok", value: O };
+export type Err<E> = { kind: "Err", value: E };
+
+export type ErrWithMeta<E extends string, M> = { kind: E, meta: M };
+export const errWithMeta = <E extends string, M>(kind: E, meta: M) => ({ kind, meta });
+
+export type Validator<I, O, E> = {
+  __i: I, __o: O, __e: E,
+
+  (input: I): Result<O, E>,
 };
 
 export type AnyValidator = Validator<any, any, any>;
 
-export const ok = <T>(input: T): Ok<T> => ({ result: "ok", value: input });
-export const err = <E extends string, M>(error: E, meta: M): Err<ErrMessage<E, M>> =>
-  ({ result: "error", message: { error, meta } });
+export const validator = <I, O, E>(fn: (input: I) => Result<O, E>) =>
+  fn as Validator<I, O, E>;
 
-export const validator = <I, O, M extends AnyErrMessage>(fn: (input: I) => Result<O, M>) =>
-  fn as Validator<I, O, M>;
+export const any = validator<any, any, any>((input) => Result.ok(input));
 
-export const any = validator<any, any, any>((input) => ok(input));
-
-export const number = validator<any, number, ErrMessage<"not_number", undefined>>((input) =>
-  typeof input === "number" ? ok(input) : err("not_number", undefined),
+export const number = validator<any, number, "not_number">((input) =>
+  typeof input === "number" ? Result.ok(input) : Result.err("not_number" as "not_number"),
 );
 
-export const nullable = validator<any, null, ErrMessage<"not_null", undefined>>((input) =>
-  input === null ? ok(input) : err("not_null", undefined),
+export const nullable = validator<any, null, "not_null">((input) =>
+  input === null ? Result.ok(input) : Result.err("not_null" as "not_null"),
 );
 
-export const optional = validator<any, undefined, ErrMessage<"not_undefined", undefined>>((input) =>
-  input === undefined ? ok(input) : err("not_undefined", undefined),
+export const optional = validator<any, undefined, "not_undefined">((input) =>
+  input === undefined ? Result.ok(input) : Result.err("not_undefined" as "not_undefined"),
 );
 
-export const string = validator<any, string, ErrMessage<"not_string", undefined>>((input) =>
-  typeof input === "string" ? ok(input) : err("not_string", undefined),
+export const string = validator<any, string, "not_string">((input) =>
+  typeof input === "string" ? Result.ok(input) : Result.err("not_string" as "not_string"),
 );
 
 export type Schema = { [field: string]: AnyValidator };
 export type GetShapeOutput<S extends Schema> = { [K in keyof S]: S[K]["__o"] };
-export type GetShapeErrMeta<S extends Schema> = { [K in keyof S]?: S[K]["__m"] };
+export type GetShapeErrMeta<S extends Schema> = { [K in keyof S]?: S[K]["__e"] };
 
 export const shape = <S extends Schema>(schema: S) =>
   validator<
     any,
     GetShapeOutput<S>,
-    (ErrMessage<"not_object", undefined> | ErrMessage<"invalid_shape", GetShapeErrMeta<S>>)
+    ("not_object" | ErrWithMeta<"invalid_shape", GetShapeErrMeta<S>>)
   >((input) => {
-    if (typeof input !== "object" || input === null || Array.isArray(input)) { return err("not_object", undefined); }
+    if (typeof input !== "object" || input === null || Array.isArray(input)) {
+      return Result.err("not_object" as "not_object");
+    }
 
     const schemaKeys = Object.keys(schema);
 
@@ -56,11 +82,11 @@ export const shape = <S extends Schema>(schema: S) =>
         const fieldValidator = schema[schemaKey];
         const fieldValue = input[schemaKey];
 
-        const validation = fieldValidator(fieldValue);
+        const validation = fieldValidator(fieldValue).unwrap();
 
-        if (validation.result === "error") {
+        if (validation.kind === "Err") {
           const invalidShapeMeta = acc[1];
-          invalidShapeMeta[schemaKey] = validation.message;
+          invalidShapeMeta[schemaKey] = validation.value;
           return [true, invalidShapeMeta, acc[2]];
         } else {
           const sanitizedValue = acc[2];
@@ -69,32 +95,34 @@ export const shape = <S extends Schema>(schema: S) =>
         }
       }, [false, ({} as any), ({} as any)]);
 
-    return hasFailure ? err("invalid_shape", invalidShapeMeta) : ok(sanitizedValue);
+    return hasFailure ? Result.err(errWithMeta("invalid_shape", invalidShapeMeta)) : Result.ok(sanitizedValue);
   });
 
 export const dict = <
   I,
   O,
-  M extends AnyErrMessage,
->(inner: Validator<I, O, M>) =>
+  E,
+>(inner: Validator<I, O, E>) =>
   validator<
     any,
     { [key: string]: O },
-    (ErrMessage<"not_object", undefined> | ErrMessage<"invalid_values", { [key: string]: M }>)
+    ("not_object" | ErrWithMeta<"invalid_values", { [key: string]: E }>)
   >((input) => {
-    if (typeof input !== "object" || input === null || Array.isArray(input)) { return err("not_object", undefined); }
+    if (typeof input !== "object" || input === null || Array.isArray(input)) {
+      return Result.err("not_object" as "not_object");
+    }
 
     const dictKeys = Object.keys(input);
 
     const [hasFailure, invalidValuesMeta, sanitizedValue] =
-      dictKeys.reduce<[boolean, { [key: string]: M }, { [key: string]: O }]>((acc, dictKey) => {
+      dictKeys.reduce<[boolean, { [key: string]: E }, { [key: string]: O }]>((acc, dictKey) => {
         const dictValue = input[dictKey];
 
-        const validation = inner(dictValue);
+        const validation = inner(dictValue).unwrap();
 
-        if (validation.result === "error") {
+        if (validation.kind === "Err") {
           const invalidValuesMeta = acc[1];
-          invalidValuesMeta[dictKey] = validation.message;
+          invalidValuesMeta[dictKey] = validation.value;
           return [true, invalidValuesMeta, acc[2]];
         } else {
           const sanitizedValue = acc[2];
@@ -103,28 +131,28 @@ export const dict = <
         }
       }, [false, ({} as any), ({} as any)]);
 
-    return hasFailure ? err("invalid_values", invalidValuesMeta) : ok(sanitizedValue);
+    return hasFailure ? Result.err(errWithMeta("invalid_values", invalidValuesMeta)) : Result.ok(sanitizedValue);
   });
 
 export const array = <
   I,
   O,
-  M extends AnyErrMessage,
->(inner: Validator<I, O, M>) =>
+  E,
+>(inner: Validator<I, O, E>) =>
   validator<
     I[],
     O[],
-    (ErrMessage<"not_array", undefined> | ErrMessage<"invalid_members", { [index: string]: M }>)
+    ("not_array" | ErrWithMeta<"invalid_members", { [index: string]: E }>)
   >((input) => {
-    if (!Array.isArray(input)) { return err("not_array", undefined); }
+    if (!Array.isArray(input)) { return Result.err("not_array" as "not_array"); }
 
-    const validations = input.map(inner);
+    const validations = input.map(inner).map((validation) => validation.unwrap());
 
     const [hasFailure, invalidMembersMeta, sanitizedValues] =
-      validations.reduce<[boolean, { [index: string]: M }, O[]]>((acc, validation, index) => {
-        if (validation.result === "error") {
+      validations.reduce<[boolean, { [index: string]: E }, O[]]>((acc, validation, index) => {
+        if (validation.kind === "Err") {
           const invalidMembersMeta = acc[1];
-          invalidMembersMeta[index] = validation.message;
+          invalidMembersMeta[index] = validation.value;
           return [true, invalidMembersMeta, acc[2]];
         } else {
           const sanitizedValues = acc[2];
@@ -133,52 +161,52 @@ export const array = <
         }
       }, [false, {}, Array(input.length)]);
 
-    return hasFailure ? err("invalid_members", invalidMembersMeta) : ok(sanitizedValues);
+    return hasFailure ? Result.err(errWithMeta("invalid_members", invalidMembersMeta)) : Result.ok(sanitizedValues);
   });
 
 export const or = <
   I,
   O1,
-  M1 extends AnyErrMessage,
+  E1,
   O2,
-  M2 extends AnyErrMessage,
+  E2,
 >(
-  v1: Validator<I, O1, M1>, v2: Validator<I, O2, M2>,
+  v1: Validator<I, O1, E1>, v2: Validator<I, O2, E2>,
 ) =>
   validator<
     I,
     (O1 | O2),
-    ErrMessage<"none_passed", Array<M1 | M2>>
+    ErrWithMeta<"none_passed", Array<E1 | E2>>
   >((input) => {
-    const val1 = v1(input);
-    if (val1.result === "ok") { return val1; }
+    const val1 = v1(input).unwrap();
+    if (val1.kind === "Ok") { return Result.ok(val1.value); }
 
-    const val2 = v2(input);
-    if (val2.result === "ok") { return val2; }
+    const val2 = v2(input).unwrap();
+    if (val2.kind === "Ok") { return Result.ok(val2.value); }
 
-    return err("none_passed", [val1.message, val2.message]);
+    return Result.err(errWithMeta("none_passed", [val1.value, val2.value]));
   });
 
 export const and = <
   I1,
   O1,
-  M1 extends AnyErrMessage,
+  E1,
   I2 extends O1,
   O2 extends O1,
-  M2 extends AnyErrMessage,
+  E2,
 >(
-  v1: Validator<I1, O1, M1>, v2: Validator<I2, O2, M2>,
+  v1: Validator<I1, O1, E1>, v2: Validator<I2, O2, E2>,
 ) =>
   validator<
     I1,
     O1 & O2,
-    ErrMessage<"some_failed", M1 | M2>
+    E1 | E2
   >((input) => {
-    const val1 = v1(input);
-    if (val1.result === "error") { return val1; }
+    const val1 = v1(input).unwrap();
+    if (val1.kind === "Err") { return Result.err(val1.value); }
 
-    const val2 = v2(val1.value as any);
-    if (val2.result === "error") { return val2; }
+    const val2 = v2(val1.value as any).unwrap();
+    if (val2.kind === "Err") { return Result.err(val2.value); }
 
-    return ok(val2.value);
+    return Result.ok(val2.value);
   });
