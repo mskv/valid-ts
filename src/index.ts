@@ -30,6 +30,7 @@ export class Result<O, E> {
   public mapOk<O2>(okFn: (ok: O) => O2): Result<O2, E> { return this.bimap(okFn, id); }
   public mapErr<E2>(errFn: (err: E) => E2): Result<O, E2> { return this.bimap(id, errFn); }
 
+  // TODO: Figure out if this is acceptable
   public bibind<O2, E2>(okFn: (ok: O) => Result<O2, E>, errFn: (err: E) => Result<O, E2>): Result<O2, E2> {
     return this.innerResult.kind === "Err" ? errFn(this.innerResult.value) : okFn(this.innerResult.value) as any;
   }
@@ -115,11 +116,7 @@ export const shape = <S extends Schema>(schema: S) =>
     return hasFailure ? Result.err(errWithMeta("invalid_shape", invalidShapeMeta)) : Result.ok(sanitizedValue);
   });
 
-export const dict = <
-  I,
-  O,
-  E,
->(inner: Validator<I, O, E>) =>
+export const dict = <I, O, E>(inner: Validator<I, O, E>) =>
   validator<
     any,
     { [key: string]: O },
@@ -151,11 +148,7 @@ export const dict = <
     return hasFailure ? Result.err(errWithMeta("invalid_values", invalidValuesMeta)) : Result.ok(sanitizedValue);
   });
 
-export const array = <
-  I,
-  O,
-  E,
->(inner: Validator<I, O, E>) =>
+export const array = <I, O, E>(inner: Validator<I, O, E>) =>
   validator<
     I[],
     O[],
@@ -181,18 +174,39 @@ export const array = <
     return hasFailure ? Result.err(errWithMeta("invalid_members", invalidMembersMeta)) : Result.ok(sanitizedValues);
   });
 
-export const or = <I, O1, E1, O2, E2>(
-  v1: Validator<I, O1, E1>, v2: Validator<I, O2, E2>,
-) => validator<I, (O1 | O2), ErrWithMeta<"none_passed", Array<E1 | E2>>>((input) =>
-  [v1, v2].reduce<Result<O1 | O2, ErrWithMeta<"none_passed", Array<E1 | E2>>>>((result, v) =>
-    result.bindErr(
-      (resultErr) => (v(input) as Result<O1 | O2, E1 | E2>).bindErr(
-        (vErr) => { resultErr.meta.push(vErr); return Result.err(resultErr); },
-      ),
-    )
-  , Result.err(errWithMeta("none_passed", []))),
-);
+// tslint:disable:max-line-length
+export function or<I, O1, E1, O2, E2>(v1: Validator<I, O1, E1>, v2: Validator<I, O2, E2>): Validator<I, (O1 | O2), ErrWithMeta<"none_passed", Array<E1 | E2>>>;
+export function or<I, O1, E1, O2, E2, O3, E3>(v1: Validator<I, O1, E1>, v2: Validator<I, O2, E2>, v3: Validator<I, O3, E3>): Validator<I, (O1 | O2 | O3), ErrWithMeta<"none_passed", Array<E1 | E2 | E3>>>;
+export function or<I, O1, E1, O2, E2, O3, E3, O4, E4>(v1: Validator<I, O1, E1>, v2: Validator<I, O2, E2>, v3: Validator<I, O3, E3>, v4: Validator<I, O4, E4>): Validator<I, (O1 | O2 | O3 | O4), ErrWithMeta<"none_passed", Array<E1 | E2 | E3 | E4>>>;
+export function or<I, O1, E1, O2, E2, O3, E3, O4, E4, O5, E5>(v1: Validator<I, O1, E1>, v2: Validator<I, O2, E2>, v3: Validator<I, O3, E3>, v4: Validator<I, O4, E4>, v5: Validator<I, O5, E5>): Validator<I, (O1 | O2 | O3 | O4 | O5), ErrWithMeta<"none_passed", Array<E1 | E2 | E3 | E4 | E5>>>;
+export function or<I, O1, E1, O2, E2, O3, E3, O4, E4, O5, E5, O6, E6>(v1: Validator<I, O1, E1>, v2: Validator<I, O2, E2>, v3: Validator<I, O3, E3>, v4: Validator<I, O4, E4>, v5: Validator<I, O5, E5>, v6: Validator<I, O6, E6>): Validator<I, (O1 | O2 | O3 | O4 | O5 | O6), ErrWithMeta<"none_passed", Array<E1 | E2 | E3 | E4 | E5 | E6>>>;
+// tslint:enable:max-line-length
+export function or(...vs: AnyValidator[]): AnyValidator {
+  if (vs.length < 2) { throw new Error("Expected at least 2 arguments"); }
 
-export const and = <I1, O1 extends I2, E1, I2, O2 extends O1, E2>(
-  v1: Validator<I1, O1, E1>, v2: Validator<I2, O2, E2>,
-) => validator<I1, O2, E1 | E2>((input) => v1(input).bind(v2));
+  return validator((input) =>
+    vs.reduce((result, v) =>
+      result.bindErr(
+        (resultErr) => v(input).bindErr(
+          (vErr) => { resultErr.meta.push(vErr); return Result.err(resultErr); },
+        ),
+      )
+    , Result.err(errWithMeta("none_passed", [] as any[]))),
+  );
+}
+
+// tslint:disable:max-line-length
+export function and<I1, O1 extends I2, E1, I2, O2 extends O1, E2>(v1: Validator<I1, O1, E1>, v2: Validator<I2, O2, E2>): Validator<I1, O2, E1 | E2>;
+export function and<I1, O1 extends I2, E1, I2, O2 extends I3, E2, I3, O3 extends O1 & O2, E3>(v1: Validator<I1, O1, E1>, v2: Validator<I2, O2, E2>, v3: Validator<I3, O3, E3>): Validator<I1, O3, E1 | E2 | E3>;
+export function and<I1, O1 extends I2, E1, I2, O2 extends I3, E2, I3, O3 extends I4, E3, I4, O4 extends O1 & O2 & O3, E4>(v1: Validator<I1, O1, E1>, v2: Validator<I2, O2, E2>, v3: Validator<I3, O3, E3>, v4: Validator<I4, O4, E4>): Validator<I1, O3, E1 | E2 | E3 | E4>;
+export function and<I1, O1 extends I2, E1, I2, O2 extends I3, E2, I3, O3 extends I4, E3, I4, O4 extends I5, E4, I5, O5 extends O1 & O2 & O3 & O4, E5>(v1: Validator<I1, O1, E1>, v2: Validator<I2, O2, E2>, v3: Validator<I3, O3, E3>, v4: Validator<I4, O4, E4>, v5: Validator<I5, O5, E5>): Validator<I1, O3, E1 | E2 | E3 | E4 | E5>;
+export function and<I1, O1 extends I2, E1, I2, O2 extends I3, E2, I3, O3 extends I4, E3, I4, O4 extends I5, E4, I5, O5 extends I6, E5, I6, O6 extends O1 & O2 & O3 & O4 & O5, E6>(v1: Validator<I1, O1, E1>, v2: Validator<I2, O2, E2>, v3: Validator<I3, O3, E3>, v4: Validator<I4, O4, E4>, v5: Validator<I5, O5, E5>, v6: Validator<I6, O6, E6>): Validator<I1, O3, E1 | E2 | E3 | E4 | E5 | E6>;
+// tslint:enable:max-line-length
+export function and(...vs: AnyValidator[]): AnyValidator {
+  if (vs.length < 2) { throw new Error("Expected at least 2 arguments"); }
+
+  const v1 = vs[0];
+  const vRest = vs.slice(1);
+
+  return validator((input) => vRest.reduce((result, v) => result.bind(v), v1(input)));
+}
