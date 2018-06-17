@@ -1,22 +1,20 @@
 export class Result<O, E> {
-  // static aliases
   public static of = Result.ok;
 
   public static ok<O, E>(ok: O) { return new Result<O, E>({ kind: "Ok", value: ok }); }
   public static err<O, E>(err: E) { return new Result<O, E>({ kind: "Err", value: err }); }
 
-  // instance aliases
-  public map = this.fmap;
+  public map = this.mapOk;
   public chain = this.bind;
+  public fmap = this.mapOk;
 
   private innerResult: InnerResult<O, E>;
   constructor(innerResult: InnerResult<O, E>) { this.innerResult = innerResult; }
 
-  public fmap<O2>(fn: (ok: O) => O2): Result<O2, E> {
-    return this.innerResult.kind === "Err" ? this as any : Result.ok(fn(this.innerResult.value));
-  }
   public ap<O2>(result: Result<(ok: O) => O2, E>): Result<O2, E> {
-    return this.innerResult.kind === "Err" ? this as any : result.fmap((fn) => fn((this.innerResult as Ok<O>).value));
+    return this.innerResult.kind === "Err"
+      ? this as any
+      : result.fmap((fn) => fn((this.innerResult as Ok<O>).value));
   }
   public bind<O2, E2>(fn: (ok: O) => Result<O2, E2>): Result<O2, E | E2> {
     return this.innerResult.kind === "Err" ? this as any : fn(this.innerResult.value);

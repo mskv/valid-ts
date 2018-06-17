@@ -8,24 +8,66 @@ It's a very simple validation library without dependencies written in TypeScript
 
 `npm install valid-ts`
 
+## Quick example
+
+```
+import * as express from "express";
+import { shape, array, string, optional, or } from "valid-ts";
+
+const app = express()
+
+const person = shape({
+  firstName: string,
+  lastName: string,
+  address: or(optional, shape({ zip: string, address: string }))
+})
+const postBody = shape({ people: array(person) });
+
+app.post("/people", (req, res) =>
+  postBody(req.body).either(
+    (people) => persistPeopleToDb(people)
+      .then((persistedPeople) => res.status(200).json({ result: persistedPeople }))
+      .catch((error) => res.status(400).json({ error })),
+    (error) => res.status(400).json({ error })
+  )
+);
+```
+
 ## API
 
 The API is based on validators. ALL of the exported functions are used to construct validators or are validators themselves. Here's the simplified type definition for reference:
 
 ```
-type Validator<I, O, M> = (input: I) => Result<O, M>
+type Validator<I, O, E> = (input: I) => Result<O, E>
 ```
 
-A validator expects an input of some type and returns a `Result<O, M>`. `Result` is just a tagged union of `Ok<O> | Err<M>`. `I` stand for input and `O` for output, `M` for the error message. Error message can contain metadata.
+A validator expects an input of some type and returns a `Result<O, E>`. `Result` is a monad that represents either a success with its value or an error with its value. Error value does not have to be a string, it can be any data structure.
 
-```
-type Result<T, M extends AnyErrMessage> = Ok<T> | Err<M>;
-type Ok<T> = { result: "ok", value: T };
-type Err<M extends AnyErrMessage> = { result: "error", message: M };
-type ErrMessage<E extends string, M> = { error: E, meta: M };
-```
+You can expect both the success type and error type to be inferred from the validator definition.
 
-You can expect both `value: T` and `meta: M` to be inferred from the validator definition.
+### Result
+
+All validations return a Result. You cannot access the success value or the error value without using Result's API. It implements the [Fantasy Land Monad](https://github.com/fantasyland/fantasy-land#monad). Apart from that, it has the following API:
+
+`bimap(okFn, errFn)`
+Mapping both the success and error at the same time.
+
+`mapOk(okFn)`
+Mapping just the success, doing nothing in case of an error (equivalent to `fmap`).
+
+`mapErr(errFn)`
+Mapping just the error, doing nothing in case of success.
+
+`either(okFn, errFn)`
+Unwraps the success and error from the Result using the given functions.
+
+`match({ Ok, Err })`
+Same as `either`, but with different syntax.
+
+`unwrap()`
+Returns an internal representation of the result - a structure containing `kind` and `value`, where `kind` is one of `Ok` or `Err`.
+
+It's easiest to examine the API by looking at the TypeScript definitions.
 
 ### Primitives
 
@@ -34,17 +76,17 @@ You can expect both `value: T` and `meta: M` to be inferred from the validator d
 ```
 import { number, string, optional, nullable } from "valid-ts"
 
-const validation1 = number(1)
-// => { result: "ok", value: 1 }
+const validation1 = number(1).unwrap()
+// => { kind: "Ok", value: 1 }
 
-const validation2 = string(1)
-// => { result: "error", message: { error: "not_string", meta: undefined } }
+const validation2 = string(1).unwrap()
+// => { kind: "Err", value: "not_string" }
 
-const validation3 = optional(1)
-// => { result: "error", message: { error: "not_undefined", meta: undefined } }
+const validation3 = optional(1).unwrap()
+// => { kind: "Err", value: "not_undefined" }
 
-const validation4 = nullable(1)
-// => { result: "error", message: { error: "not_null", meta: undefined } }
+const validation4 = nullable(1).unwrap()
+// => { kind: "Err", value: "not_null" }
 ```
 
 ### Array
@@ -56,26 +98,26 @@ import { array, number } from "valid-ts"
 
 const validator = array(number)
 
-const validation1 = validator(1)
-// => { result: "error", message: { error: "not_array", meta: undefined } }
+const validation1 = validator(1).unwrap()
+// => { kind: "Err", value: "not_array" }
 
-const validation2 = validator([])
-// => { result: "ok", value: [] }
+const validation2 = validator([]).unwrap()
+// => { kind: "Ok", value: [] }
 
-const validation3 = validator([1, "2", 3, "4"])
+const validation3 = validator([1, "2", 3, "4"]).unwrap()
 // => {
-//      result: "error",
-//      message: {
-//        error: "invalid_members",
+//      kind: "Err",
+//      value: {
+//        kind: "invalid_members",
 //        meta: {
-//          "1": { error: "not_number", meta: undefined },
-//          "3": { error: "not_number", meta: undefined },
+//          "1": "not_number",
+//          "3": "not_number",
 //        }
 //      }
 //    }
 
-const validation4 = validator([1, 2, 3, 4])
-// => { result: "ok", value: [1, 2, 3, 4] }] }
+const validation4 = validator([1, 2, 3, 4]).unwrap()
+// => { kind: "Ok", value: [1, 2, 3, 4] }] }
 ```
 
 ### Shape
@@ -91,35 +133,35 @@ const validator = shape({
   f3: array(string),
 })
 
-const validation1 = validator([])
-// => { result: "error", message: { error: "not_object", meta: undefined } }
+const validation1 = validator([]).unwrap()
+// => { kind: "Err", value: "not_object" }
 
-const validation2 = validator({})
+const validation2 = validator({}).unwrap()
 // => {
-//      result: "error",
-//      message: {
-//        error: "invalid_shape",
+//      kind: "Err",
+//      value: {
+//        kind: "invalid_shape",
 //        meta: {
-//          "f1": { error: "not_number", meta: undefined },
-//          "f3": { error: "not_array", meta: undefined },
+//          "f1": "not_number",
+//          "f3": "not_array",
 //        }
 //      }
 //    }
 
-const validation3 = validator({ f1: 1, f3: [1, "2"] })
+const validation3 = validator({ f1: 1, f3: [1, "2"] }).unwrap()
 // => {
-//      result: "error",
-//      message: {
-//        error: "invalid_shape",
+//      kind: "Err",
+//      value: {
+//        kind: "invalid_shape",
 //        meta: {
-//          "f1": { error: "not_number", meta: undefined },
-//          "f3": { error: "invalid_members", meta: { "0": { error: "not_string", meta: undefined } } },
+//          "f1": "not_number",
+//          "f3": { kind: "invalid_members", meta: { "0": "not_string" } },
 //        }
 //      }
 //    }
 
-const validation4 = validator({ f1: 1, f3: [1, 2] })
-// => { result: "ok", value: { f1: 1, f3: [1, 2] } }
+const validation4 = validator({ f1: 1, f3: [1, 2] }).unwrap()
+// => { kind: "Ok", value: { f1: 1, f3: [1, 2] } }
 ```
 
 ### Dict
@@ -131,26 +173,26 @@ import { dict, number } from "valid-ts"
 
 const validator = dict(number)
 
-const validation1 = validator(1)
-// => { result: "error", message: { error: "not_object", meta: undefined } }
+const validation1 = validator(1).unwrap()
+// => { kind: "Err", value: "not_object" }
 
-const validation2 = validator({})
-// => { result: "ok", value: {} }
+const validation2 = validator({}).unwrap()
+// => { kind: "Ok", value: {} }
 
-const validation3 = validator({ f1: 1, f2: "2", f3: 3, f4: "4" })
+const validation3 = validator({ f1: 1, f2: "2", f3: 3, f4: "4" }).unwrap()
 // => {
-//      result: "error",
-//      message: {
-//        error: "invalid_values",
+//      kind: "Err",
+//      value: {
+//        kind: "invalid_values",
 //        meta: {
-//          "f1": { error: "not_number", meta: undefined },
-//          "f3": { error: "not_number", meta: undefined },
+//          "f1": "not_number",
+//          "f3": "not_number",
 //        }
 //      }
 //    }
 
-const validation4 = validator({ f1: 1, f2: 2, f3: 3, f4: 4 })
-// => { result: "ok", value: { f1: 1, f2: 2, f3: 3, f4: 4 } }] }
+const validation4 = validator({ f1: 1, f2: 2, f3: 3, f4: 4 }).unwrap()
+// => { kind: "Ok", value: { f1: 1, f2: 2, f3: 3, f4: 4 } }] }
 ```
 
 ### Any
@@ -162,14 +204,14 @@ import { array, any } from "valid-ts"
 
 const validator = array(any)
 
-const validation1 = validator(1)
-// => { result: "error", message: { error: "not_array", meta: undefined } }
+const validation1 = validator(1).unwrap()
+// => { kind: "Err", value: "not_array" }
 
-const validation2 = validator([])
-// => { result: "ok", value: [] }
+const validation2 = validator([]).unwrap()
+// => { kind: "Ok", value: [] }
 
-const validation3 = validator([1, "2", 3, "4"])
-// => { result: "ok", value: [1, "2", 3, "4"] }] }
+const validation3 = validator([1, "2", 3, "4"]).unwrap()
+// => { kind: "Ok", value: [1, "2", 3, "4"] }] }
 ```
 
 ### Custom validators
@@ -183,13 +225,13 @@ const greaterThan1 = validator<number, number, ErrMessage<"not_greater_than_1", 
   input > 1 ? ok(input) : err("not_greater_than_1", { actual: input }),
 );
 
-const validation1 = greaterThan1(1)
-// => { result: "error", message: { error: "not_greater_than_1", meta: { actual: 1 } } }
+const validation1 = greaterThan1(1).unwrap()
+// => { kind: "Err", value: { kind: "not_greater_than_1", meta: { actual: 1 } } }
 
-const validation2 = greaterThan1(2)
-// => { result: "ok", value: 2 }
+const validation2 = greaterThan1(2).unwrap()
+// => { kind: "Ok", value: 2 }
 
-const validation3 = greaterThan1("1")
+const validation3 = greaterThan1("1").unwrap()
 // => compilation error
 ```
 
@@ -207,48 +249,48 @@ const greaterThan1 = validator<number, number, ErrMessage<"not_greater_than_1", 
 // OR
 const orValidator = or(array(number), nullable)
 
-const orValidation1 = orValidator(null)
-// => { result: "ok", value: null }
+const orValidation1 = orValidator(null).unwrap()
+// => { kind: "Ok", value: null }
 
-const orValidation2 = orValidator([1, 2, 3])
-// => { result: "ok", value: [1, 2, 3] }
+const orValidation2 = orValidator([1, 2, 3]).unwrap()
+// => { kind: "Ok", value: [1, 2, 3] }
 
-const orValidation3 = orValidator(string)
+const orValidation3 = orValidator(string).unwrap()
 // => {
-//      result: "error",
-//      message: {
-//        error: "none_passed",
-//        meta: [{ error: "not_array", meta: undefined }, { error: "not_null", meta: undefined }]
+//      kind: "Err",
+//      value: {
+//        kind: "none_passed",
+//        meta: ["not_array}, "not_null"]
 //      }
 //    }
 
-const orValidation4 = orValidator(["1"])
+const orValidation4 = orValidator(["1"]).unwrap()
 // => {
-//      result: "error",
-//      message: {
-//        error: "none_passed",
+//      kind: "Err",
+//      value: {
+//        kind: "none_passed",
 //        meta: [
-//          { error: "invlid_members", meta: { "0": { error: "not_number", meta: undefined } } },
-//          { error: "not_null", meta: undefined }
+//          { kind: "invlid_members", meta: { "0": "not_number" } },
+//          "not_null"
 //        ]
 //      }
 //    }
 
 
 // AND
-const andValidator = and(number, string)
+const andValidator = and(number, string).unwrap()
 // => compilation error
 
-const andValidator = and(string, greaterThan1)
+const andValidator = and(string, greaterThan1).unwrap()
 // => compilation error
 
 const andValidator = and(number, greaterThan1)
 
-const andValidation1 = andValidator(2)
-// => { result: "ok", value: 2 }
+const andValidation1 = andValidator(2).unwrap()
+// => { kind: "Ok", value: 2 }
 
-const andValidation2 = andValidator(1)
-// => { result: "error", message: { error: "not_greated_than_1", meta: { actual: 1 } } }
+const andValidation2 = andValidator(1).unwrap()
+// => { kind: "Err", value: { kind: "not_greated_than_1", meta: { actual: 1 } } }
 ```
 
 ### More examples
@@ -287,9 +329,9 @@ const validation = user(input)
 
 5. Add specs.
 
-6. Make `or` and `and` variadic.
+6. ~~Make `or` and `and` variadic.~~
 
-7. Make the `Result` type composable.
+7. ~~Make the `Result` type composable.~~
 
 8. Include coercion.
 
