@@ -125,7 +125,7 @@ const validation4 = validator([1, 2, 3, 4]).unwrap()
 `shape`
 
 ```
-import { shape, number, string, array } from "valid-ts"
+import { shape, number, string, array, optional } from "valid-ts"
 
 const validator = shape({
   f1: number,
@@ -148,7 +148,7 @@ const validation2 = validator({}).unwrap()
 //      }
 //    }
 
-const validation3 = validator({ f1: 1, f3: [1, "2"] }).unwrap()
+const validation3 = validator({ f1: "1", f3: [1, "2"] }).unwrap()
 // => {
 //      kind: "Err",
 //      value: {
@@ -160,8 +160,8 @@ const validation3 = validator({ f1: 1, f3: [1, "2"] }).unwrap()
 //      }
 //    }
 
-const validation4 = validator({ f1: 1, f3: [1, 2] }).unwrap()
-// => { kind: "Ok", value: { f1: 1, f3: [1, 2] } }
+const validation4 = validator({ f1: 1, f3: ["1", "2"] }).unwrap()
+// => { kind: "Ok", value: { f1: 1, f3: ["1", "2"] } }
 ```
 
 ### Dict
@@ -185,8 +185,8 @@ const validation3 = validator({ f1: 1, f2: "2", f3: 3, f4: "4" }).unwrap()
 //      value: {
 //        kind: "invalid_values",
 //        meta: {
-//          "f1": "not_number",
-//          "f3": "not_number",
+//          "f2": "not_number",
+//          "f4": "not_number",
 //        }
 //      }
 //    }
@@ -219,10 +219,10 @@ const validation3 = validator([1, "2", 3, "4"]).unwrap()
 `validator`
 
 ```
-import { validator, ok, err } from "valid-ts"
+import { validator, Result, ErrWithMeta, errWithMeta } from "valid-ts"
 
-const greaterThan1 = validator<number, number, ErrMessage<"not_greater_than_1", { actual: number }>>((input) =>
-  input > 1 ? ok(input) : err("not_greater_than_1", { actual: input }),
+const greaterThan1 = validator<number, number, ErrWithMeta<"not_greater_than_1", { actual: number }>>((input) =>
+  input > 1 ? Result.ok(input) : Result.err(errWithMeta("not_greater_than_1", { actual: input })),
 );
 
 const validation1 = greaterThan1(1).unwrap()
@@ -240,10 +240,10 @@ const validation3 = greaterThan1("1").unwrap()
 `and`, `or`
 
 ```
-import { validator, and, or, number, nullable, array, ok, err } from "valid-ts"
+import { validator, and, or, number, nullable, array, string, Result, ErrWithMeta, errWithMeta } from "valid-ts"
 
-const greaterThan1 = validator<number, number, ErrMessage<"not_greater_than_1", { actual: number }>>((input) =>
-  input > 1 ? ok(input) : err("not_greater_than_1", { actual: input }),
+const greaterThan1 = validator<number, number, ErrWithMeta<"not_greater_than_1", { actual: number }>>((input) =>
+  input > 1 ? Result.ok(input) : Result.err(errWithMeta("not_greater_than_1", { actual: input })),
 );
 
 // OR
@@ -260,7 +260,7 @@ const orValidation3 = orValidator(string).unwrap()
 //      kind: "Err",
 //      value: {
 //        kind: "none_passed",
-//        meta: ["not_array}, "not_null"]
+//        meta: ["not_array", "not_null"]
 //      }
 //    }
 
