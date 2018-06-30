@@ -25,7 +25,7 @@ const postBody = shape({ people: array(person) });
 
 app.post("/people", (req, res) =>
   postBody(req.body).either(
-    (people) => persistPeopleToDb(people)
+    ({ people }) => persistPeopleToDb(people)
       .then((persistedPeople) => res.status(200).json({ result: persistedPeople }))
       .catch((error) => res.status(400).json({ error })),
     (error) => res.status(400).json({ error })
