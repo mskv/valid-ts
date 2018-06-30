@@ -13,6 +13,23 @@ export class Result<O, E> {
   private innerResult: InnerResult<O, E>;
   constructor(innerResult: InnerResult<O, E>) { this.innerResult = innerResult; }
 
+  public get isOk(): boolean { return this.innerResult.kind === "Ok"; }
+  public get isErr(): boolean { return this.innerResult.kind === "Err"; }
+  public get ok(): O {
+    if (this.innerResult.kind === "Ok") {
+      return this.innerResult.value;
+    } else {
+      throw new Error("Calling `.ok` on an Err Result");
+    }
+  }
+  public get err(): E {
+    if (this.innerResult.kind === "Err") {
+      return this.innerResult.value;
+    } else {
+      throw new Error("Calling `.err` on an Ok Result");
+    }
+  }
+
   public ap<O2>(result: Result<(ok: O) => O2, E>): Result<O2, E> {
     return this.innerResult.kind === "Err"
       ? this as any

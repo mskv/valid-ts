@@ -33,6 +33,20 @@ app.post("/people", (req, res) =>
 );
 ```
 
+Alternatively...
+
+```
+app.post("/people", (req, res) => {
+  const validation = postBody(req.body)
+
+  if (validation.isErr) { return res.status(400).json({ error: validation.err }) }
+
+  return persistPeopleToDb(validation.ok.people)
+    .then((persistedPeople) => res.status(200).json({ result: persistedPeople }))
+    .catch((error) => res.status(400).json({ error })),
+});
+```
+
 ## API
 
 The API is based on validators. ALL of the exported functions are used to construct validators or are validators themselves. Here's the simplified type definition for reference:
@@ -66,6 +80,12 @@ Same as `either`, but with different syntax.
 
 `unwrap()`
 Returns an internal representation of the result - a structure containing `kind` and `value`, where `kind` is one of `Ok` or `Err`.
+
+`isOk` and `isErr`
+Inform about the result's state.
+
+`ok` and `err`
+Getters returning the value cast to Ok or Err, throwing a runtime error when called inappropriately.
 
 It's easiest to examine the API by looking at the TypeScript definitions.
 
