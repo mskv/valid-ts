@@ -368,11 +368,27 @@ app.post("/reservation", bodyParser.json(), async (req, res) => {
 });
 ```
 
+`oneOf`
+
+Just as `eq`, allows to pass a custom comparison predicate. Note the cast `"abc" as "abc"` so that the inferred type is more specific than just `string`.
+
+```
+import { oneOf } from "./validators";
+
+const validator = oneOf(["abc" as "abc", "def" as "def"]);
+
+const validation1 = validator("abc").unwrap();
+// => { kind: "Ok", value: "abc" }
+
+const validation2 = validator(1).unwrap();
+// => { kind: "Err", value: { kind: "not_one_of", meta: { expected: ["abc", "def"], actual: 1 } } }
+```
+
 ### TODO
 
 1. ~~Type errors.~~
 
-2. Add `not`.
+2. ~~Add `not`.~~ - not doing that
 
 3. Add `rules` to `shape` - predicates spanning multiple fields.
 
@@ -390,4 +406,4 @@ app.post("/reservation", bodyParser.json(), async (req, res) => {
 
 10. ~~Add `any`.~~
 
-11. Add `oneOf(v)`.
+11. ~~Add `oneOf(v)`.~~
