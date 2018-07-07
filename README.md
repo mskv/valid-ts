@@ -407,3 +407,7 @@ const validation2 = validator(1).unwrap();
 10. ~~Add `any`.~~
 
 11. ~~Add `oneOf(v)`.~~
+
+12. Consider changing `or(optional, string)` into `optional(string)` (same for `nullable`).
+
+13. Reserach the possibility of testing type inference.
