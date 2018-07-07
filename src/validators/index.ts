@@ -1,6 +1,7 @@
 export * from "./and";
 export * from "./array";
 export * from "./dict";
+export * from "./eq";
 export * from "./or";
 export * from "./primitives";
 export * from "./shape";

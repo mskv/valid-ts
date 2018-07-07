@@ -313,28 +313,59 @@ const andValidation2 = andValidator(1).unwrap()
 // => { kind: "Err", value: { kind: "not_greated_than_1", meta: { actual: 1 } } }
 ```
 
-### More examples
+### Equality and inclusion
+
+`eq`
+
+Tests equality, useful for custructing tagged unions as they can be nicely refined in TypeScript by conditional expressions like `switch-case`. Can provide a custom predicate for comparison, by default just uses `===`.
 
 ```
-import { shape, string, array, or, and } from "valid-ts"
-import { email, tag } from "./my_validators"
+import bodyParser from "body-parser";
+import express from "express";
+import { eq, or, shape, string } from "valid-ts";
 
-const user = shape({
-  name: string,
-  email: or(email, optional),
-  address: or(shape({
-    zip: string,
-    city: string,
-  }), optional),
-  tags: array(and(string, tag)),
-})
+const app = express();
 
-const input = {
-  name: "Johnny",
-  tags: []
-}
+const customEqualityPredicate = (val1: any, val2: any) => val1 == val2
 
-const validation = user(input)
+const reservationCommandValidator = or(
+  shape({
+    kind: eq("RequestTicketReservation" as "RequestTicketReservation"),
+    ticketId: string,
+  }),
+  shape({
+    kind: eq("RevokeTicketReservation" as "RevokeTicketReservation"),
+    reservationId: string,
+  }),
+  shape({
+    kind: eq("ArchiveTicketReservation" as "ArchiveTicketReservation", customEqualityPredicate),
+    reservationId: string,
+  }),
+);
+
+app.post("/reservation", bodyParser.json(), async (req, res) => {
+  const commandValidation = reservationCommandValidator(req.body);
+  if (commandValidation.isErr) { return res.status(400).json({ result: commandValidation.err }); }
+
+  const command = commandValidation.ok;
+
+  switch (command.kind) {
+    case "RequestTicketReservation": {
+      const ticketId = command.ticketId;
+
+      return res.status(200).json({ result: (...) });
+    }
+    case "RevokeTicketReservation": {
+      const reservationId = command.reservationId;
+
+      return res.status(200).json({ result: (...) });
+    }
+    case "ArchiveTicketReservation": {
+      const reservationId = command.reservationId;
+
+      return res.status(200).json({ result: (...) });
+    }
+});
 ```
 
 ### TODO

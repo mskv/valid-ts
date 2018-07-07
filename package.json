@@ -14,7 +14,8 @@
   "scripts": {
     "build": "tsc",
     "lint": "tslint './src/**/*.ts'",
-    "prepublishOnly": "npm run build"
+    "clean-dist": "rm -rf dist",
+    "prepublishOnly": "npm run clean-dist && npm run build"
   },
   "devDependencies": {
     "ts-node": "^5.0.1",
