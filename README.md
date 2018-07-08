@@ -320,7 +320,7 @@ const andValidation2 = andValidator(1).unwrap()
 
 `eq`
 
-Tests equality, useful for custructing tagged unions as they can be nicely refined in TypeScript by conditional expressions like `switch-case`. Can provide a custom predicate for comparison, by default just uses `===`.
+Tests equality, useful for custructing tagged unions as they can be nicely refined in TypeScript by conditional expressions like `switch-case`. Can provide a custom predicate for comparison, by default just uses `===`. Note that introducing any kind of coercion in the custom predicate is dangerous as it makes the inferred types potentially untrue. It's better to coerce the values first before using the `eq` validator.
 
 ```
 import bodyParser from "body-parser";
@@ -397,7 +397,7 @@ const validation2 = validator(1).unwrap();
 
 4. Add documentation.
 
-5. Add specs.
+5. ~~Add specs.~~
 
 6. ~~Make `or` and `and` variadic.~~
 
@@ -414,3 +414,11 @@ const validation2 = validator(1).unwrap();
 12. ~~Consider changing `or(optional, string)` into `optional(string)` (same for `nullable`).~~
 
 13. Reserach the possibility of testing type inference.
+
+14. Consider adding examples to show actual use cases, eg. a working Express endpoint (note the need for the CI to ensure they are runnable).
+
+### Development
+
+`npm install`
+
+`npm test`
