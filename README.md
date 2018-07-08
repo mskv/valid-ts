@@ -19,7 +19,7 @@ const app = express()
 const person = shape({
   firstName: string,
   lastName: string,
-  address: or(optional, shape({ zip: string, address: string }))
+  address: optional(shape({ zip: string, address: string }))
 })
 const postBody = shape({ people: array(person) });
 
@@ -102,11 +102,11 @@ const validation1 = number(1).unwrap()
 const validation2 = string(1).unwrap()
 // => { kind: "Err", value: "not_string" }
 
-const validation3 = optional(1).unwrap()
-// => { kind: "Err", value: "not_undefined" }
+const validation3 = optional(string)(undefined).unwrap()
+// => { kind: "Ok", value: undefined }
 
-const validation4 = nullable(1).unwrap()
-// => { kind: "Err", value: "not_null" }
+const validation4 = nullable(string)(null).unwrap()
+// => { kind: "Ok", value: null }
 ```
 
 ### Array
@@ -145,11 +145,11 @@ const validation4 = validator([1, 2, 3, 4]).unwrap()
 `shape`
 
 ```
-import { shape, number, string, array, optional } from "valid-ts"
+import { shape, number, string, array, optional, any } from "valid-ts"
 
 const validator = shape({
   f1: number,
-  f2: optional,
+  f2: optional(any),
   f3: array(string),
 })
 
@@ -260,14 +260,14 @@ const validation3 = greaterThan1("1").unwrap()
 `and`, `or`
 
 ```
-import { validator, and, or, number, nullable, array, string, Result, ErrWithMeta, errWithMeta } from "valid-ts"
+import { validator, and, or, number, eq, array, Result, ErrWithMeta, errWithMeta } from "valid-ts"
 
 const greaterThan1 = validator<number, number, ErrWithMeta<"not_greater_than_1", { actual: number }>>((input) =>
   input > 1 ? Result.ok(input) : Result.err(errWithMeta("not_greater_than_1", { actual: input })),
 );
 
 // OR
-const orValidator = or(array(number), nullable)
+const orValidator = or(array(number), eq(null))
 
 const orValidation1 = orValidator(null).unwrap()
 // => { kind: "Ok", value: null }
@@ -275,12 +275,15 @@ const orValidation1 = orValidator(null).unwrap()
 const orValidation2 = orValidator([1, 2, 3]).unwrap()
 // => { kind: "Ok", value: [1, 2, 3] }
 
-const orValidation3 = orValidator(string).unwrap()
+const orValidation3 = orValidator("string").unwrap()
 // => {
 //      kind: "Err",
 //      value: {
 //        kind: "none_passed",
-//        meta: ["not_array", "not_null"]
+//        meta: [
+//          "not_array",
+//          { kind: "not_equals", meta: { expected: null, actual: "string" } }
+//        ]
 //      }
 //    }
 
@@ -290,8 +293,8 @@ const orValidation4 = orValidator(["1"]).unwrap()
 //      value: {
 //        kind: "none_passed",
 //        meta: [
-//          { kind: "invlid_members", meta: { "0": "not_number" } },
-//          "not_null"
+//          { kind: "invalid_members", meta: { "0": "not_number" } },
+//          { kind: "not_equals", meta: { expected: null, actual: ["1"] } }
 //        ]
 //      }
 //    }
@@ -408,6 +411,6 @@ const validation2 = validator(1).unwrap();
 
 11. ~~Add `oneOf(v)`.~~
 
-12. Consider changing `or(optional, string)` into `optional(string)` (same for `nullable`).
+12. ~~Consider changing `or(optional, string)` into `optional(string)` (same for `nullable`).~~
 
 13. Reserach the possibility of testing type inference.
