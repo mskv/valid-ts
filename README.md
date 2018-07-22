@@ -417,6 +417,10 @@ const validation2 = validator(1).unwrap();
 
 14. Consider adding examples to show actual use cases, eg. a working Express endpoint (note the need for the CI to ensure they are runnable).
 
+15. Add CI and the fancy "100% coverage" badges.
+
+16. Consider renaming `and` to `all` and `or` to `any`.
+
 ### Development
 
 `npm install`
