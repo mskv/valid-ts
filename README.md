@@ -403,7 +403,7 @@ const validation2 = validator(1).unwrap();
 
 7. ~~Make the `Result` type composable.~~
 
-8. Include coercion.
+8. Include coercion - all validators are also coercers, but it is not explicitly documented.
 
 9. ~~Add `dict`.~~
 
@@ -420,6 +420,8 @@ const validation2 = validator(1).unwrap();
 15. Add CI and the fancy "100% coverage" badges.
 
 16. Consider renaming `and` to `all` and `or` to `any`.
+
+17. Finalize the error API. In practice, it is often useful to have a simple array that can be turned into error messages. We need to somehow accomodate that. Another tricky thing to consider is an option to accumulate errors like [Scalaz Validation](https://scalaz.github.io/scalaz/scalaz-2.8.1-6.0.1/doc.sxr/scalaz/Validation.scala.html) does. 
 
 ### Development
 
