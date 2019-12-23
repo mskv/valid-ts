@@ -4,22 +4,26 @@ import { AnyValidator, validator } from "./validator";
 
 export type Schema = { [field: string]: AnyValidator };
 export type GetShapeOutput<S extends Schema> = { [K in keyof S]: S[K]["__o"] };
-export type GetShapeErrMeta<S extends Schema> = { [K in keyof S]?: S[K]["__e"] };
+export type GetShapeErrMeta<S extends Schema> = {
+  [K in keyof S]?: S[K]["__e"];
+};
 
 export const shape = <S extends Schema>(schema: S) =>
   validator<
     any,
     GetShapeOutput<S>,
-    ("not_object" | ErrWithMeta<"invalid_shape", GetShapeErrMeta<S>>)
-  >((input) => {
+    "not_object" | ErrWithMeta<"invalid_shape", GetShapeErrMeta<S>>
+  >(input => {
     if (typeof input !== "object" || input === null || Array.isArray(input)) {
       return Result.err("not_object" as "not_object");
     }
 
-    const schemaKeys = Object.keys(schema);
+    const schemaKeys = Object.keys(schema) as [keyof S];
 
-    const [hasFailure, invalidShapeMeta, sanitizedValue] =
-      schemaKeys.reduce<[boolean, GetShapeErrMeta<S>, GetShapeOutput<S>]>((acc, schemaKey) => {
+    const [hasFailure, invalidShapeMeta, sanitizedValue] = schemaKeys.reduce<
+      [boolean, GetShapeErrMeta<S>, GetShapeOutput<S>]
+    >(
+      (acc, schemaKey) => {
         const fieldValidator = schema[schemaKey];
         const fieldValue = input[schemaKey];
 
@@ -31,10 +35,16 @@ export const shape = <S extends Schema>(schema: S) =>
           return [true, invalidShapeMeta, acc[2]];
         } else {
           const sanitizedValue = acc[2];
-          if (validation.value !== undefined) { sanitizedValue[schemaKey] = validation.value; }
+          if (validation.value !== undefined) {
+            sanitizedValue[schemaKey] = validation.value;
+          }
           return [acc[0], acc[1], sanitizedValue];
         }
-      }, [false, ({} as any), ({} as any)]);
+      },
+      [false, {} as any, {} as any]
+    );
 
-    return hasFailure ? Result.err(errWithMeta("invalid_shape", invalidShapeMeta)) : Result.ok(sanitizedValue);
+    return hasFailure
+      ? Result.err(errWithMeta("invalid_shape", invalidShapeMeta))
+      : Result.ok(sanitizedValue);
   });
