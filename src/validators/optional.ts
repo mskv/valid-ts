@@ -1,8 +1,7 @@
-import { Result } from "../result";
+import { ok } from "../result";
 
-import { validator, Validator } from "./validator";
+import { AnyValidator, ExtractValidatorI, ExtractValidatorO } from "./validator";
 
-export const optional = <I, O, E>(inner: Validator<I, O, E>) =>
-  validator<I | undefined, O | undefined, E>(input =>
-    input === undefined ? Result.ok(input as undefined) : inner(input)
-  );
+export const optional = <V extends AnyValidator>(inner: V) =>
+  (input: ExtractValidatorI<V> | undefined) =>
+    input === undefined ? ok(undefined) : inner(input) as ExtractValidatorO<V>;

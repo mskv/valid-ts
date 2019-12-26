@@ -1,16 +1,16 @@
+import { err, ok } from "../../result";
+
 import { eq } from "../eq";
 
 describe("eq - default validator", () => {
   const validator = eq("1");
 
   it("eq - checking valid value", () => {
-    expect(validator("1").unwrap()).toEqual({ kind: "Ok", value: "1" });
+    expect(validator("1")).toEqual(ok("1"));
   });
 
   it("eq - checking invalid value", () => {
-    expect(validator(1).unwrap()).toEqual(
-      { kind: "Err", value: { kind: "not_equals", meta: { expected: "1", actual: 1 } } },
-    );
+    expect(validator(1)).toEqual(err("not_equals"));
   });
 });
 
@@ -19,10 +19,10 @@ describe("eq - custom validator", () => {
   const validator = eq("1", (input, value) => input == value);
 
   it("eq - checking valid value", () => {
-    expect(validator("1").unwrap()).toEqual({ kind: "Ok", value: "1" });
+    expect(validator("1")).toEqual(ok("1"));
   });
 
   it("eq - checking value that is valid due to switching to custom validator", () => {
-    expect(validator(1).unwrap()).toEqual({ kind: "Ok", value: 1 });
+    expect(validator(1)).toEqual(ok(1));
   });
 });

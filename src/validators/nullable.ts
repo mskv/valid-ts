@@ -1,8 +1,7 @@
-import { Result } from "../result";
+import { ok } from "../result";
 
-import { validator, Validator } from "./validator";
+import { AnyValidator, ExtractValidatorI, ExtractValidatorO } from "./validator";
 
-export const nullable = <I, O, E>(inner: Validator<I, O, E>) =>
-  validator<I | null, O | null, E>(input =>
-    input === null ? Result.ok(input as null) : inner(input)
-  );
+export const nullable = <V extends AnyValidator>(inner: V) =>
+  (input: ExtractValidatorI<V> | null) =>
+    input === null ? ok(null) : inner(input) as ExtractValidatorO<V>;

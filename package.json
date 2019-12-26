@@ -14,6 +14,7 @@
   "scripts": {
     "build": "tsc --project ./tsconfig.build.json",
     "lint": "tslint './src/**/*.ts'",
+    "lint:fix": "tslint './src/**/*.ts' --fix",
     "clean-dist": "rm -rf dist",
     "test": "jest $PATTERN",
     "prepublishOnly": "npm run clean-dist && npm run build"

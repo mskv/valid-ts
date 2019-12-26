@@ -1,14 +1,12 @@
-import { errWithMeta, ErrWithMeta, Result } from "../result";
+import { Err, err, Ok, ok } from "../result";
 
-import { validator } from "./validator";
+import { Validator } from "./validator";
 
-export type EqErr<T> = ErrWithMeta<"not_equals", { expected: T, actual: any }>;
+type EqOutput<T> = Ok<T> | Err<"not_equals">;
+
 export type EqPredicate<T> = (input: any, value: T) => boolean;
 
 export const equals: EqPredicate<any> = (input, value) => input === value;
 
-export const eq = <T>(value: T, predicate: EqPredicate<T> = equals) => validator<any, T, EqErr<T>>(
-  (input) => predicate(input, value)
-    ? Result.ok(input)
-    : Result.err(errWithMeta("not_equals", { expected: value, actual: input })),
-);
+export const eq = <T>(value: T, predicate: EqPredicate<T> = equals): Validator<any, EqOutput<T>> =>
+  (input) => predicate(input, value) ? ok(input) : err("not_equals");
