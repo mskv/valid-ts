@@ -1,4 +1,4 @@
-import { Err, err, FilterErr, FilterOk, Ok, ok, ResultKind, UnwrapErr, UnwrapOk } from "../result";
+import { Err, err, FilterErr, FilterOk, isErr, Ok, ok, UnwrapErr, UnwrapOk } from "../result";
 
 import { AnyValidator, ExtractValidatorO, Validator } from "./validator";
 
@@ -25,7 +25,7 @@ export const array = <V extends AnyValidator>(inner: V): Validator<any, ArrayOut
 
     const [errors, sanitizedValue] = validations.reduce(
       (acc, validation, index) => {
-        if (validation.kind === ResultKind.Err) {
+        if (isErr(validation)) {
           const error = { index, error: validation.value };
           const errors = acc[0];
           errors.push(error);

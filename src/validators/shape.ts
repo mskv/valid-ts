@@ -1,4 +1,4 @@
-import { Err, err, FilterErr, FilterOk, Ok, ok, ResultKind, UnwrapErr, UnwrapOk } from "../result";
+import { Err, err, FilterErr, FilterOk, isErr, Ok, ok, UnwrapErr, UnwrapOk } from "../result";
 
 import { AnyValidator, ExtractValidatorO, Validator } from "./validator";
 
@@ -35,7 +35,7 @@ export const shape = <S extends Schema>(schema: S): Validator<any, ShapeOutput<S
 
         const validation = fieldValidator(fieldValue);
 
-        if (validation.kind === ResultKind.Err) {
+        if (isErr(validation)) {
           const error = { field: schemaKey, error: validation.value };
           const errors = acc[0];
           errors.push(error);

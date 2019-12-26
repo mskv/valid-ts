@@ -1,4 +1,4 @@
-import { Err, err, FilterErr, FilterOk, Ok, ok, ResultKind, UnwrapErr, UnwrapOk } from "../result";
+import { Err, err, FilterErr, FilterOk, isErr, Ok, ok, UnwrapErr, UnwrapOk } from "../result";
 import { AnyValidator, ExtractValidatorO, Validator } from "./validator";
 
 type DictOutput<V extends AnyValidator> = DictOutputOk<V> | DictOutputErr<V>;
@@ -29,7 +29,7 @@ export const dict = <V extends AnyValidator>(inner: V): Validator<any, DictOutpu
         const value = input[dictKey];
         const validation = inner(value);
 
-        if (validation.kind === ResultKind.Err) {
+        if (isErr(validation)) {
           const error = { key: dictKey, error: validation.value };
           const errors = acc[0];
           errors.push(error);
