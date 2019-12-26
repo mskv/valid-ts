@@ -1,12 +1,11 @@
-import { errWithMeta, ErrWithMeta, Result } from "../result";
+import { Err, err, Ok, ok } from "../result";
 
 import { EqPredicate, equals } from "./eq";
-import { validator } from "./validator";
+import { Validator } from "./validator";
 
-export type InclErr<T> = ErrWithMeta<"not_includes", { expected: T[], actual: any }>;
+type InclOutput<T> = Ok<T> | Err<"not_includes">;
 
-export const incl = <T>(values: T[], predicate: EqPredicate<T> = equals) => validator<any, T, InclErr<T>>(
+export const incl = <T>(values: T[], predicate: EqPredicate<T> = equals): Validator<any, InclOutput<T>> =>
   (input) => values.some((value) => predicate(input, value))
-    ? Result.ok(input)
-    : Result.err(errWithMeta("not_includes", { expected: values, actual: input })),
-);
+    ? ok(input)
+    : err("not_includes");

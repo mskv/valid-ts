@@ -1,35 +1,51 @@
-import { errWithMeta, ErrWithMeta, Result } from "../result";
+import { Err, err, FilterErr, FilterOk, Ok, ok, ResultKind, UnwrapErr, UnwrapOk } from "../result";
+import { AnyValidator, ExtractValidatorO, Validator } from "./validator";
 
-import { validator, Validator } from "./validator";
+type DictOutput<V extends AnyValidator> = DictOutputOk<V> | DictOutputErr<V>;
+type DictOutputOk<V extends AnyValidator> = Ok<{
+  [key: string]: UnwrapOk<FilterOk<ExtractValidatorO<V>>>,
+}>;
+type DictOutputErr<V extends AnyValidator> = Err<
+  "not_object"
+  | {
+    kind: "invalid_values",
+    value: Array<{
+      key: string,
+      error: UnwrapErr<FilterErr<ExtractValidatorO<V>>>,
+    }>,
+  }
+>;
 
-export const dict = <I, O, E>(inner: Validator<I, O, E>) =>
-  validator<
-    any,
-    { [key: string]: O },
-    ("not_object" | ErrWithMeta<"invalid_values", { [key: string]: E }>)
-  >((input) => {
+export const dict = <V extends AnyValidator>(inner: V): Validator<any, DictOutput<V>> =>
+  (input) => {
     if (typeof input !== "object" || input === null || Array.isArray(input)) {
-      return Result.err("not_object" as "not_object");
+      return err("not_object");
     }
 
     const dictKeys = Object.keys(input);
 
-    const [hasFailure, invalidValuesMeta, sanitizedValue] =
-      dictKeys.reduce<[boolean, { [key: string]: E }, { [key: string]: O }]>((acc, dictKey) => {
-        const dictValue = input[dictKey];
+    const [errors, sanitizedValue] = dictKeys.reduce(
+      (acc, dictKey) => {
+        const value = input[dictKey];
+        const validation = inner(value);
 
-        const validation = inner(dictValue).unwrap();
-
-        if (validation.kind === "Err") {
-          const invalidValuesMeta = acc[1];
-          invalidValuesMeta[dictKey] = validation.value;
-          return [true, invalidValuesMeta, acc[2]];
+        if (validation.kind === ResultKind.Err) {
+          const error = { key: dictKey, error: validation.value };
+          const errors = acc[0];
+          errors.push(error);
+          return [errors, acc[1]];
         } else {
-          const sanitizedValue = acc[2];
-          if (validation.value !== undefined) { sanitizedValue[dictKey] = validation.value; }
-          return [acc[0], acc[1], sanitizedValue];
+          const sanitizedValue = acc[1];
+          if (validation.value !== undefined) {
+            sanitizedValue[dictKey] = validation.value;
+          }
+          return [acc[0], sanitizedValue];
         }
-      }, [false, ({} as any), ({} as any)]);
+      },
+      [[] as any[], {} as any],
+    );
 
-    return hasFailure ? Result.err(errWithMeta("invalid_values", invalidValuesMeta)) : Result.ok(sanitizedValue);
-  });
+    return errors.length
+      ? err({ kind: "invalid_values", value: errors })
+      : ok(sanitizedValue) as any;
+  };

@@ -1,50 +1,57 @@
-import { errWithMeta, ErrWithMeta, Result } from "../result";
+import { Err, err, FilterErr, FilterOk, Ok, ok, ResultKind, UnwrapErr, UnwrapOk } from "../result";
 
-import { AnyValidator, validator } from "./validator";
+import { AnyValidator, ExtractValidatorO, Validator } from "./validator";
 
-export type Schema = { [field: string]: AnyValidator };
-export type GetShapeOutput<S extends Schema> = { [K in keyof S]: S[K]["__o"] };
-export type GetShapeErrMeta<S extends Schema> = {
-  [K in keyof S]?: S[K]["__e"];
-};
+type Schema = { [field: string]: AnyValidator };
+type ShapeOutput<S extends Schema> = ShapeOutputOk<S> | ShapeOutputErr<S>;
+type ShapeOutputOk<S extends Schema> =
+  Ok<{ [K in keyof S]: UnwrapOk<FilterOk<ExtractValidatorO<S[K]>>> }>;
+type ShapeOutputErr<S extends Schema> =
+  Err<
+    "not_object"
+    | {
+      kind: "invalid_shape",
+      value: {
+        [K in keyof S]: {
+          field: K,
+          error: UnwrapErr<FilterErr<ExtractValidatorO<S[K]>>>,
+        }
+      }[keyof S],
+    }
+  >;
 
-export const shape = <S extends Schema>(schema: S) =>
-  validator<
-    any,
-    GetShapeOutput<S>,
-    "not_object" | ErrWithMeta<"invalid_shape", GetShapeErrMeta<S>>
-  >(input => {
+export const shape = <S extends Schema>(schema: S): Validator<any, ShapeOutput<S>> =>
+  (input) => {
     if (typeof input !== "object" || input === null || Array.isArray(input)) {
-      return Result.err("not_object" as "not_object");
+      return err("not_object");
     }
 
     const schemaKeys = Object.keys(schema) as [keyof S];
 
-    const [hasFailure, invalidShapeMeta, sanitizedValue] = schemaKeys.reduce<
-      [boolean, GetShapeErrMeta<S>, GetShapeOutput<S>]
-    >(
+    const [errors, sanitizedValue] = schemaKeys.reduce(
       (acc, schemaKey) => {
         const fieldValidator = schema[schemaKey];
         const fieldValue = input[schemaKey];
 
-        const validation = fieldValidator(fieldValue).unwrap();
+        const validation = fieldValidator(fieldValue);
 
-        if (validation.kind === "Err") {
-          const invalidShapeMeta = acc[1];
-          invalidShapeMeta[schemaKey] = validation.value;
-          return [true, invalidShapeMeta, acc[2]];
+        if (validation.kind === ResultKind.Err) {
+          const error = { field: schemaKey, error: validation.value };
+          const errors = acc[0];
+          errors.push(error);
+          return [errors, acc[1]];
         } else {
-          const sanitizedValue = acc[2];
+          const sanitizedValue = acc[1];
           if (validation.value !== undefined) {
             sanitizedValue[schemaKey] = validation.value;
           }
-          return [acc[0], acc[1], sanitizedValue];
+          return [acc[0], sanitizedValue];
         }
       },
-      [false, {} as any, {} as any]
+      [[] as any[], {} as any],
     );
 
-    return hasFailure
-      ? Result.err(errWithMeta("invalid_shape", invalidShapeMeta))
-      : Result.ok(sanitizedValue);
-  });
+    return errors.length
+      ? err({ kind: "invalid_shape", value: errors })
+      : ok(sanitizedValue) as any;
+  };

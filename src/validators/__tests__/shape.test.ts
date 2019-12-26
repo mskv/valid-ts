@@ -1,3 +1,5 @@
+import { err, FilterOk, ok } from "../../result";
+
 import { nullable } from "../nullable";
 import { optional } from "../optional";
 import { string } from "../primitives";
@@ -11,19 +13,20 @@ const validator = shape({
 });
 
 it("shape - checking invalid value, non-object", () => {
-  expect(validator(1).unwrap()).toEqual({ kind: "Err", value: "not_object" });
+  expect(validator(1)).toEqual(err("not_object"));
 });
 
 it("shape - checking invalid value, object with missing fields", () => {
   expect(validator({
     f1: "1",
     f4: { f4f1: "1" },
-  }).unwrap()).toEqual({
-    kind: "Err",
-    value: { kind: "invalid_shape", meta: {
-      f3: "not_string",
-    } },
-  });
+  })).toEqual(err({
+    kind: "invalid_shape",
+    value: [{
+      field: "f3",
+      error: "not_string",
+    }],
+  }));
 });
 
 it("shape - checking invalid value, object with invalid fields", () => {
@@ -32,13 +35,13 @@ it("shape - checking invalid value, object with invalid fields", () => {
     f2: 1,
     f3: null,
     f4: { f4f1: "1" },
-  }).unwrap()).toEqual({
-    kind: "Err",
-    value: { kind: "invalid_shape", meta: {
-      f1: "not_string",
-      f2: "not_string",
-    } },
-  });
+  })).toEqual(err({
+    kind: "invalid_shape",
+    value: [
+      { field: "f1", error: "not_string" },
+      { field: "f2", error: "not_string" },
+    ],
+  }));
 });
 
 it("shape - checking invalid value, error in nested shape", () => {
@@ -46,29 +49,29 @@ it("shape - checking invalid value, error in nested shape", () => {
     f1: "1",
     f3: null,
     f4: { f4f1: 1 },
-  }).unwrap()).toEqual({
-    kind: "Err",
-    value: { kind: "invalid_shape", meta: {
-      f4: { kind: "invalid_shape", meta: { f4f1: "not_string" } },
-    } },
-  });
+  })).toEqual(err({
+    kind: "invalid_shape",
+    value: [
+      {
+        field: "f4",
+        error: { kind: "invalid_shape", value: [{ field: "f4f1", error: "not_string" }] },
+      },
+    ],
+  }));
 });
 
-const validResult = {
-  kind: "Ok",
-  value: {
-    f1: "1",
-    f3: null,
-    f4: { f4f1: "1" },
-  },
-};
+const validResult = ok({
+  f1: "1",
+  f3: null,
+  f4: { f4f1: "1" },
+});
 
 it("shape - checking valid value", () => {
   expect(validator({
     f1: "1",
     f3: null,
     f4: { f4f1: "1" },
-  }).unwrap()).toEqual(validResult);
+  })).toEqual(validResult);
 });
 
 it("shape - coercion - checking valid value, pruning fields with undefined values", () => {
@@ -77,7 +80,7 @@ it("shape - coercion - checking valid value, pruning fields with undefined value
     f2: undefined,
     f3: null,
     f4: { f4f1: "1" },
-  }).unwrap() as any;
+  });
 
   expect(result).toEqual(validResult);
 
@@ -89,11 +92,11 @@ it("shape - coercion - checking valid value, pruning fields with undefined value
     f1: "1",
     f3: null,
     f4: { f4f1: "1", f4f2: undefined },
-  }).unwrap() as any;
+  });
 
   expect(result).toEqual(validResult);
 
-  expect(result.value.f4.hasOwnProperty("f4f2")).toEqual(false);
+  expect((result as FilterOk<typeof result>).value.f4.hasOwnProperty("f4f2")).toEqual(false);
 });
 
 it("shape - coercion - checking valid value, pruning additional fields", () => {
@@ -102,7 +105,7 @@ it("shape - coercion - checking valid value, pruning additional fields", () => {
     f3: null,
     f4: { f4f1: "1" },
     f5: "whatever",
-  }).unwrap() as any;
+  });
 
   expect(result).toEqual(validResult);
 
@@ -115,9 +118,9 @@ it("shape - coercion - checking valid value, pruning additional fields also in n
     f1: "1",
     f3: null,
     f4: { f4f1: "1", f4f3: "whatever" },
-  }).unwrap() as any;
+  });
 
   expect(result).toEqual(validResult);
-  expect(result.value.f4.hasOwnProperty("f4f2")).toEqual(false);
-  expect(result.value.f4.hasOwnProperty("f4f3")).toEqual(false);
+  expect((result as FilterOk<typeof result>).value.f4.hasOwnProperty("f4f2")).toEqual(false);
+  expect((result as FilterOk<typeof result>).value.f4.hasOwnProperty("f4f3")).toEqual(false);
 });

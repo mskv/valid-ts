@@ -1,29 +1,45 @@
-import { errWithMeta, ErrWithMeta, Result } from "../result";
+import { Err, err, FilterErr, FilterOk, Ok, ok, ResultKind, UnwrapErr, UnwrapOk } from "../result";
 
-import { validator, Validator } from "./validator";
+import { AnyValidator, ExtractValidatorO, Validator } from "./validator";
 
-export const array = <I, O, E>(inner: Validator<I, O, E>) =>
-  validator<
-    I[],
-    O[],
-    ("not_array" | ErrWithMeta<"invalid_members", { [index: string]: E }>)
-  >((input) => {
-    if (!Array.isArray(input)) { return Result.err("not_array" as "not_array"); }
+type ArrayOutput<V extends AnyValidator> = ArrayOutputOk<V> | ArrayOutputErr<V>;
+type ArrayOutputOk<V extends AnyValidator> =
+  Ok<Array<UnwrapOk<FilterOk<ExtractValidatorO<V>>>>>;
+type ArrayOutputErr<V extends AnyValidator> =
+  Err<
+    "not_array"
+    | {
+      kind: "invalid_members",
+      value: Array<{
+        index: number,
+        error: UnwrapErr<FilterErr<ExtractValidatorO<V>>>,
+      }>,
+    }
+  >;
 
-    const validations = input.map(inner).map((validation) => validation.unwrap());
+export const array = <V extends AnyValidator>(inner: V): Validator<any, ArrayOutput<V>> =>
+  (input) => {
+    if (!Array.isArray(input)) { return err("not_array"); }
 
-    const [hasFailure, invalidMembersMeta, sanitizedValues] =
-      validations.reduce<[boolean, { [index: string]: E }, O[]]>((acc, validation, index) => {
-        if (validation.kind === "Err") {
-          const invalidMembersMeta = acc[1];
-          invalidMembersMeta[index] = validation.value;
-          return [true, invalidMembersMeta, acc[2]];
+    const validations = input.map(inner);
+
+    const [errors, sanitizedValue] = validations.reduce(
+      (acc, validation, index) => {
+        if (validation.kind === ResultKind.Err) {
+          const error = { index, error: validation.value };
+          const errors = acc[0];
+          errors.push(error);
+          return [errors, acc[1]];
         } else {
-          const sanitizedValues = acc[2];
-          sanitizedValues[index] = validation.value;
-          return [acc[0], acc[1], sanitizedValues];
+          const sanitizedValue = acc[1];
+          sanitizedValue[index] = validation.value;
+          return [acc[0], sanitizedValue];
         }
-      }, [false, {}, Array(input.length)]);
+      },
+      [[] as any[], [] as any[]],
+    );
 
-    return hasFailure ? Result.err(errWithMeta("invalid_members", invalidMembersMeta)) : Result.ok(sanitizedValues);
-  });
+    return errors.length
+      ? err({ kind: "invalid_members", value: errors })
+      : ok(sanitizedValue) as any;
+  };
