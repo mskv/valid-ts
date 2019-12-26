@@ -1,4 +1,4 @@
-import { Err, err, FilterErr, Ok, ok, ResultKind, UnwrapErr } from "../result";
+import { AnyResult, Err, err, FilterErr, isOk, Ok, ok, UnwrapErr } from "../result";
 
 import { AnyValidator, ExtractValidatorO } from "./validator";
 
@@ -15,13 +15,13 @@ export const all = <Vs extends AnyValidator[]>(...validators: Vs) => {
   return <I>(input: I): Ok<I> | AllOutputErr<Vs> => validators.reduce((result, validator) => {
     const validation = validator(input);
 
-    if (validation.kind === ResultKind.Ok) {
+    if (isOk(validation)) {
       return result;
-    } else if (result.kind === ResultKind.Ok) {
+    } else if (isOk(result)) {
       return err({ kind: "some_failed", value: [validation.value] });
     } else {
       result.value.value.push(validation.value);
       return result;
     }
-  }, ok(input) as any);
+  }, ok(input) as AnyResult);
 };

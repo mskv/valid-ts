@@ -1,6 +1,6 @@
 import { LastTupleElem } from "../utils";
 
-import { AnyResult, FilterErr, FilterOk, ResultKind, UnwrapOk } from "../result";
+import { AnyResult, FilterErr, FilterOk, isErr, UnwrapOk } from "../result";
 import { AnyValidator, ExtractValidatorI, ExtractValidatorO, Validator } from "./validator";
 
 interface And {
@@ -23,9 +23,7 @@ export const and: And = (...validators: any) => {
   const validstorsRest = validators.slice(1);
 
   return (input: any) =>
-    validstorsRest.reduce((result: any, validator: any) =>
-      result.kind === ResultKind.Err
-        ? result
-        : validator(result.value)
-      , validatorsFirst(input)) as any;
+    validstorsRest.reduce((result: AnyResult, validator: AnyValidator) =>
+      isErr(result) ? result : validator(result.value)
+      , validatorsFirst(input)) as AnyResult;
 };
