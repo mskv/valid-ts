@@ -1,5 +1,6 @@
 import { err, ok } from "../../result";
 
+import { notNumberError, notStringError } from "../error";
 import { any, number, string } from "../primitives";
 
 it("any", () => {
@@ -13,18 +14,18 @@ it("any", () => {
 
 it("number", () => {
   expect(number(1)).toEqual(ok(1));
-  expect(number("1")).toEqual(err("not_number"));
-  expect(number(null)).toEqual(err("not_number"));
-  expect(number(undefined)).toEqual(err("not_number"));
-  expect(number({})).toEqual(err("not_number"));
-  expect(number([])).toEqual(err("not_number"));
+  expect(number("1")).toEqual(err(notNumberError));
+  expect(number(null)).toEqual(err(notNumberError));
+  expect(number(undefined)).toEqual(err(notNumberError));
+  expect(number({})).toEqual(err(notNumberError));
+  expect(number([])).toEqual(err(notNumberError));
 });
 
 it("string", () => {
-  expect(string(1)).toEqual(err("not_string"));
+  expect(string(1)).toEqual(err(notStringError));
   expect(string("1")).toEqual(ok("1"));
-  expect(string(null)).toEqual(err("not_string"));
-  expect(string(undefined)).toEqual(err("not_string"));
-  expect(string({})).toEqual(err("not_string"));
-  expect(string([])).toEqual(err("not_string"));
+  expect(string(null)).toEqual(err(notStringError));
+  expect(string(undefined)).toEqual(err(notStringError));
+  expect(string({})).toEqual(err(notStringError));
+  expect(string([])).toEqual(err(notStringError));
 });

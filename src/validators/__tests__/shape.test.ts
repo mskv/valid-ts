@@ -1,5 +1,6 @@
 import { err, FilterOk, ok } from "../../result";
 
+import { invalidShapeError, notObjectError, notStringError } from "../error";
 import { nullable } from "../nullable";
 import { optional } from "../optional";
 import { string } from "../primitives";
@@ -13,20 +14,19 @@ const validator = shape({
 });
 
 it("shape - checking invalid value, non-object", () => {
-  expect(validator(1)).toEqual(err("not_object"));
+  expect(validator(1)).toEqual(err(notObjectError));
 });
 
 it("shape - checking invalid value, object with missing fields", () => {
   expect(validator({
     f1: "1",
     f4: { f4f1: "1" },
-  })).toEqual(err({
-    kind: "invalid_shape",
-    value: [{
+  })).toEqual(err(
+    invalidShapeError([{
       field: "f3",
-      error: "not_string",
-    }],
-  }));
+      error: notStringError,
+    }]),
+  ));
 });
 
 it("shape - checking invalid value, object with invalid fields", () => {
@@ -35,13 +35,12 @@ it("shape - checking invalid value, object with invalid fields", () => {
     f2: 1,
     f3: null,
     f4: { f4f1: "1" },
-  })).toEqual(err({
-    kind: "invalid_shape",
-    value: [
-      { field: "f1", error: "not_string" },
-      { field: "f2", error: "not_string" },
-    ],
-  }));
+  })).toEqual(err(
+    invalidShapeError([
+      { field: "f1", error: notStringError },
+      { field: "f2", error: notStringError },
+    ]),
+  ));
 });
 
 it("shape - checking invalid value, error in nested shape", () => {
@@ -49,15 +48,12 @@ it("shape - checking invalid value, error in nested shape", () => {
     f1: "1",
     f3: null,
     f4: { f4f1: 1 },
-  })).toEqual(err({
-    kind: "invalid_shape",
-    value: [
-      {
-        field: "f4",
-        error: { kind: "invalid_shape", value: [{ field: "f4f1", error: "not_string" }] },
-      },
-    ],
-  }));
+  })).toEqual(err(
+    invalidShapeError([{
+      field: "f4",
+      error: invalidShapeError([{ field: "f4f1", error: notStringError }]),
+    }]),
+  ));
 });
 
 const validResult = ok({

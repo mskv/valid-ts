@@ -1,4 +1,5 @@
 import { err, ok } from "../../result";
+import { inclusionError } from "../error";
 import { incl } from "../incl";
 
 describe("incl - default validator", () => {
@@ -9,7 +10,7 @@ describe("incl - default validator", () => {
   });
 
   it("incl - checking invalid value", () => {
-    expect(validator("2")).toEqual(err("not_includes"));
+    expect(validator("2")).toEqual(err(inclusionError));
   });
 });
 

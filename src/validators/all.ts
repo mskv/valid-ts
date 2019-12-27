@@ -1,11 +1,12 @@
 import { AnyResult, Err, err, FilterErr, isOk, Ok, ok, UnwrapErr } from "../result";
 
+import { SomeFailedError, someFailedError } from "./error";
 import { AnyValidator, ExtractValidatorO } from "./validator";
 
 type AllOutputErr<Vs extends AnyValidator[]> = Err<
   {
-    kind: "some_failed",
-    value: Array<UnwrapErr<FilterErr<ExtractValidatorO<Vs[number]>>>>,
+    kind: SomeFailedError["kind"],
+    errors: Array<UnwrapErr<FilterErr<ExtractValidatorO<Vs[number]>>>>,
   }
 >;
 
@@ -18,9 +19,9 @@ export const all = <Vs extends AnyValidator[]>(...validators: Vs) => {
     if (isOk(validation)) {
       return result;
     } else if (isOk(result)) {
-      return err({ kind: "some_failed", value: [validation.value] });
+      return err(someFailedError([validation.value]));
     } else {
-      result.value.value.push(validation.value);
+      result.value.errors.push(validation.value);
       return result;
     }
   }, ok(input) as AnyResult);

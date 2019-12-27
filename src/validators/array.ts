@@ -1,5 +1,6 @@
 import { Err, err, FilterErr, FilterOk, isErr, Ok, ok, UnwrapErr, UnwrapOk } from "../result";
 
+import { InvalidArrayError, invalidArrayError, NotArrayError, notArrayError } from "./error";
 import { AnyValidator, ExtractValidatorO, Validator } from "./validator";
 
 type ArrayOutput<V extends AnyValidator> = ArrayOutputOk<V> | ArrayOutputErr<V>;
@@ -7,10 +8,10 @@ type ArrayOutputOk<V extends AnyValidator> =
   Ok<Array<UnwrapOk<FilterOk<ExtractValidatorO<V>>>>>;
 type ArrayOutputErr<V extends AnyValidator> =
   Err<
-    "not_array"
+    NotArrayError
     | {
-      kind: "invalid_members",
-      value: Array<{
+      kind: InvalidArrayError["kind"],
+      errors: Array<{
         index: number,
         error: UnwrapErr<FilterErr<ExtractValidatorO<V>>>,
       }>,
@@ -19,7 +20,7 @@ type ArrayOutputErr<V extends AnyValidator> =
 
 export const array = <V extends AnyValidator>(inner: V): Validator<any, ArrayOutput<V>> =>
   (input) => {
-    if (!Array.isArray(input)) { return err("not_array"); }
+    if (!Array.isArray(input)) { return err(notArrayError); }
 
     const validations = input.map(inner);
 
@@ -40,6 +41,6 @@ export const array = <V extends AnyValidator>(inner: V): Validator<any, ArrayOut
     );
 
     return errors.length
-      ? err({ kind: "invalid_members", value: errors })
+      ? err(invalidArrayError(errors))
       : ok(sanitizedValue) as any;
   };

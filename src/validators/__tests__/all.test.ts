@@ -1,6 +1,7 @@
 import { err, ok } from "../../result";
 
 import { all } from "../all";
+import { invalidShapeError, notNumberError, notStringError, someFailedError } from "../error";
 import { number, string } from "../primitives";
 import { shape } from "../shape";
 
@@ -27,17 +28,8 @@ it("all - accumulates failures on invalid input", () => {
     additional: Date.now(),
   };
 
-  expect(validator(input)).toEqual(err({
-    kind: "some_failed",
-    value: [
-      {
-        kind: "invalid_shape",
-        value: [{ field: "firstName", error: "not_string" }],
-      },
-      {
-        kind: "invalid_shape",
-        value: [{ field: "id", error: "not_number" }],
-      },
-    ],
-  }));
+  expect(validator(input)).toEqual(err(someFailedError([
+    invalidShapeError([{ field: "firstName", error: notStringError }]),
+    invalidShapeError([{ field: "id", error: notNumberError }]),
+  ])));
 });

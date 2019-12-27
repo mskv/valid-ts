@@ -1,4 +1,5 @@
 import { Err, err, FilterErr, FilterOk, isErr, Ok, ok, UnwrapErr, UnwrapOk } from "../result";
+import { InvalidDictionaryError, invalidDictionaryError, NotObjectError, notObjectError } from "./error";
 import { AnyValidator, ExtractValidatorO, Validator } from "./validator";
 
 type DictOutput<V extends AnyValidator> = DictOutputOk<V> | DictOutputErr<V>;
@@ -6,10 +7,10 @@ type DictOutputOk<V extends AnyValidator> = Ok<{
   [key: string]: UnwrapOk<FilterOk<ExtractValidatorO<V>>>,
 }>;
 type DictOutputErr<V extends AnyValidator> = Err<
-  "not_object"
+  NotObjectError
   | {
-    kind: "invalid_values",
-    value: Array<{
+    kind: InvalidDictionaryError["kind"],
+    errors: Array<{
       key: string,
       error: UnwrapErr<FilterErr<ExtractValidatorO<V>>>,
     }>,
@@ -19,7 +20,7 @@ type DictOutputErr<V extends AnyValidator> = Err<
 export const dict = <V extends AnyValidator>(inner: V): Validator<any, DictOutput<V>> =>
   (input) => {
     if (typeof input !== "object" || input === null || Array.isArray(input)) {
-      return err("not_object");
+      return err(notObjectError);
     }
 
     const dictKeys = Object.keys(input);
@@ -46,6 +47,6 @@ export const dict = <V extends AnyValidator>(inner: V): Validator<any, DictOutpu
     );
 
     return errors.length
-      ? err({ kind: "invalid_values", value: errors })
+      ? err(invalidDictionaryError(errors))
       : ok(sanitizedValue) as any;
   };
