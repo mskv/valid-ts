@@ -1,6 +1,7 @@
 import { err, ok } from "../../result";
 
 import { eq } from "../eq";
+import { equalityError } from "../error";
 
 describe("eq - default validator", () => {
   const validator = eq("1");
@@ -10,7 +11,7 @@ describe("eq - default validator", () => {
   });
 
   it("eq - checking invalid value", () => {
-    expect(validator(1)).toEqual(err("not_equals"));
+    expect(validator(1)).toEqual(err(equalityError));
   });
 });
 

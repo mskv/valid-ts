@@ -3,6 +3,7 @@ export * from "./and";
 export * from "./array";
 export * from "./dict";
 export * from "./eq";
+export * from "./error";
 export * from "./incl";
 export * from "./nullable";
 export * from "./optional";

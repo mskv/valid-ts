@@ -1,6 +1,7 @@
 import { err, ok } from "../../result";
 
 import { and } from "../and";
+import { allFailedError, notNumberError, notStringError } from "../error";
 import { or } from "../or";
 import { number, string } from "../primitives";
 
@@ -21,7 +22,7 @@ const stringToInt = (input: string | number) => {
     return ok(Math.round(input));
   } else {
     const parsed = parseInt(input, 10);
-    if (!parsed) { return err("cannot_cast_to_int" as const); }
+    if (!parsed) { return err({ kind: "cannot_cast_to_int" as const }); }
     return ok(parsed);
   }
 };
@@ -29,9 +30,9 @@ const stringToInt = (input: string | number) => {
 it("and - next validator/coercer receives value from the previous one", () => {
   const validator = and(or(string, number), stringToInt, greaterThan1);
 
-  expect(validator({})).toEqual(err({ kind: "none_passed", value: ["not_string", "not_number"] }));
+  expect(validator({})).toEqual(err(allFailedError([notStringError, notNumberError])));
 
-  expect(validator("abc")).toEqual(err("cannot_cast_to_int"));
+  expect(validator("abc")).toEqual(err({ kind: "cannot_cast_to_int" }));
 
   expect(validator("1")).toEqual(err({ kind: "not_greater_than_1", actual: 1 }));
 

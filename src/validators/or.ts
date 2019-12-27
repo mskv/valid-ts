@@ -1,5 +1,6 @@
 import { Err, err, FilterErr, FilterOk, isOk, UnwrapErr } from "../result";
 
+import { allFailedError, AllFailedError } from "./error";
 import { AnyValidator, ExtractValidatorI, ExtractValidatorO } from "./validator";
 
 export const or = <Vs extends AnyValidator[]>(...validators: Vs) => {
@@ -14,14 +15,14 @@ export const or = <Vs extends AnyValidator[]>(...validators: Vs) => {
       if (isOk(validation)) {
         return validation as any;
       } else {
-        result.value.value.push(validation.value);
+        result.value.errors.push(validation.value);
         return result;
       }
     }
-  }, err({ kind: "none_passed", value: [] }) as
+  }, err(allFailedError([])) as
   FilterOk<ExtractValidatorO<Vs[number]>>
   | Err<{
-    kind: "none_passed",
-    value: Array<UnwrapErr<FilterErr<ExtractValidatorO<Vs[number]>>>>,
+    kind: AllFailedError["kind"],
+    errors: Array<UnwrapErr<FilterErr<ExtractValidatorO<Vs[number]>>>>,
   }>);
 };
