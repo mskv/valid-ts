@@ -1,6 +1,9 @@
-export type ValidTsError
-  = SomeFailedError
-  | AllFailedError
+export type ValidTsError<Custom = never>
+  = SomeFailedError<Custom>
+  | AllFailedError<Custom>
+  | InvalidArrayError<Custom>
+  | InvalidDictionaryError<Custom>
+  | InvalidShapeError<Custom>
   | NotArrayError
   | NotObjectError
   | NotNumberError
@@ -8,16 +11,39 @@ export type ValidTsError
   | NotBooleanError
   | EqualityError
   | InclusionError
-  | InvalidArrayError
-  | InvalidDictionaryError
-  | InvalidShapeError;
+  | Custom;
 
-export type SomeFailedError = { kind: "SomeFailedError", errors: ValidTsError[] };
-export const someFailedError = (errors: ValidTsError[]): SomeFailedError =>
+export type SomeFailedError<Custom = never> = { kind: "SomeFailedError", errors: Array<ValidTsError<Custom>> };
+export const someFailedError = <Custom>(errors: Array<ValidTsError<Custom>>): SomeFailedError<Custom> =>
   ({ kind: "SomeFailedError", errors });
-export type AllFailedError = { kind: "AllFailedError", errors: ValidTsError[] };
-export const allFailedError = (errors: ValidTsError[]): AllFailedError =>
+
+export type AllFailedError<Custom = never> = { kind: "AllFailedError", errors: Array<ValidTsError<Custom>> };
+export const allFailedError = <Custom>(errors: Array<ValidTsError<Custom>>): AllFailedError<Custom> =>
   ({ kind: "AllFailedError", errors });
+
+export type InvalidArrayError<Custom = never> = {
+  kind: "InvalidArrayError",
+  errors: Array<{ index: number, error: ValidTsError<Custom> }>,
+};
+export const invalidArrayError =
+  <Custom = never>(errors: Array<{ index: number, error: ValidTsError<Custom> }>): InvalidArrayError<Custom> =>
+    ({ kind: "InvalidArrayError", errors });
+
+export type InvalidDictionaryError<Custom = never> = {
+  kind: "InvalidDictionaryError",
+  errors: Array<{ key: string, error: ValidTsError<Custom> }>,
+};
+export const invalidDictionaryError =
+  <Custom = never>(errors: Array<{ key: string, error: ValidTsError<Custom> }>): InvalidDictionaryError<Custom> =>
+    ({ kind: "InvalidDictionaryError", errors });
+
+export type InvalidShapeError<Custom = never> = {
+  kind: "InvalidShapeError",
+  errors: Array<{ field: string, error: ValidTsError<Custom> }>,
+};
+export const invalidShapeError =
+  <Custom = never>(errors: Array<{ field: string, error: ValidTsError<Custom> }>): InvalidShapeError<Custom> =>
+    ({ kind: "InvalidShapeError", errors });
 
 export type NotArrayError = { kind: "NotArrayError" };
 export const notArrayError: NotArrayError = { kind: "NotArrayError" };
@@ -34,22 +60,3 @@ export type EqualityError = { kind: "EqualityError" };
 export const equalityError: EqualityError = { kind: "EqualityError" };
 export type InclusionError = { kind: "InclusionError" };
 export const inclusionError: InclusionError = { kind: "InclusionError" };
-
-export type InvalidArrayError = {
-  kind: "InvalidArrayError",
-  errors: Array<{ index: number, error: ValidTsError }>,
-};
-export const invalidArrayError = (errors: Array<{ index: number, error: ValidTsError }>): InvalidArrayError =>
-  ({ kind: "InvalidArrayError", errors });
-export type InvalidDictionaryError = {
-  kind: "InvalidDictionaryError",
-  errors: Array<{ key: string, error: ValidTsError }>,
-};
-export const invalidDictionaryError = (errors: Array<{ key: string, error: ValidTsError }>): InvalidDictionaryError =>
-  ({ kind: "InvalidDictionaryError", errors });
-export type InvalidShapeError = {
-  kind: "InvalidShapeError",
-  errors: Array<{ field: string, error: ValidTsError }>,
-};
-export const invalidShapeError = (errors: Array<{ field: string, error: ValidTsError }>): InvalidShapeError =>
-  ({ kind: "InvalidShapeError", errors });
