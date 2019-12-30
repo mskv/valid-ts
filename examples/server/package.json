@@ -1,0 +1,23 @@
+{
+  "name": "valid-ts-client-examples",
+  "version": "0.0.1",
+  "description": "",
+  "private": true,
+  "scripts": {
+    "start:dev": "ts-node src/index.ts",
+    "lint": "tslint './src/**/*.ts' './src/**/*.tsx'",
+    "lint:fix": "tslint './src/**/*.ts' './src/**/*.tsx' --fix"
+  },
+  "author": "Michał Podwórny",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/express": "^4.17.2",
+    "@types/node": "^13.1.1",
+    "express": "^4.17.1",
+    "ts-node": "^8.5.4",
+    "tslint": "^5.20.1",
+    "typescript": "^3.7.4"
+  },
+  "peerDependencies": {}
+}
