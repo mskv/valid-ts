@@ -1,6 +1,6 @@
 {
   "name": "valid-ts",
-  "version": "0.0.7",
+  "version": "0.1.1",
   "description": "Simple TypeScript validation library with a declarative interface",
   "repository": {
     "type": "git",
@@ -17,7 +17,7 @@
     "lint:fix": "tslint './src/**/*.ts' --fix",
     "clean-dist": "rm -rf dist",
     "test": "jest $PATTERN",
-    "prepublishOnly": "npm run clean-dist && npm run build"
+    "prepare": "npm run clean-dist && npm run build"
   },
   "devDependencies": {
     "@types/jest": "^24.0.24",

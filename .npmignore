@@ -1,4 +1,7 @@
 notes.md
 examples
 __tests__
+jest.config.js
 .tool-versions
+tsconfig.*
+tslint.*
