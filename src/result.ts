@@ -11,13 +11,13 @@ export type FilterOk<T extends AnyResult> = Extract<T, { kind: ResultKind.Ok }>;
 export type FilterErr<T extends AnyResult> = Extract<T, { kind: ResultKind.Err }>;
 
 export const ok = <T>(value: T): Ok<T> => ({ kind: ResultKind.Ok, value });
-export const isOk = <O, E>(result: Result<O, E>): result is Ok<O> => result.kind === ResultKind.Ok;
-export function assertOk<O, E>(result: Result<O, E>): asserts result is Ok<O> {
+export const isOk = <R extends AnyResult>(result: R): result is FilterOk<R> => result.kind === ResultKind.Ok;
+export function assertOk<R extends AnyResult>(result: R): asserts result is FilterOk<R> {
   if (!isOk(result)) { throw new Error("Expected Ok"); }
 }
 
 export const err = <T>(value: T): Err<T> => ({ kind: ResultKind.Err, value });
-export const isErr = <O, E>(result: Result<O, E>): result is Err<E> => result.kind === ResultKind.Err;
-export function assertErr<O, E>(result: Result<O, E>): asserts result is Err<E> {
+export const isErr = <R extends AnyResult>(result: R): result is FilterErr<R> => result.kind === ResultKind.Err;
+export function assertErr<R extends AnyResult>(result: R): asserts result is FilterErr<R> {
   if (!isErr(result)) { throw new Error("Expected Err"); }
 }
