@@ -4,6 +4,30 @@
 
 It's a very simple validation library. No dependencies. Written in TypeScript. Useful for counstructing well-typed validation functions using a declarative interface. The validation functions are generally supposed to accept any input, ensure its shape during runtime and return typed values.
 
+## The gist of it
+
+Validation result success and error types are inferred from the validators used.
+
+```
+const personValidator = shape({
+  name: shape({
+    first: string,
+    last: string
+  }),
+  age: number
+})
+
+const validation = personValidator(<input>)
+
+if (isOk(validation)) {
+  // Handle success with validation.value
+  // validation.value is typed to the validator successful result
+} else {
+  // Handle failure with validation.value
+  // validation.value is typed to the validator erroneous result
+}
+```
+
 ## Installation:
 
 `npm install --save valid-ts`
