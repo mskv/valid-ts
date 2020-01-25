@@ -1,4 +1,4 @@
-# Client usage examples
+# Server usage examples
 
 Run `npm install` and `npm run start:dev`. Then experiment with the example endpoint:
 
