@@ -57,3 +57,9 @@ There are two simple example projects to look at. Please check their `README.md`
 ## Contributing
 
 You're welcome to open a GitHub issue about any problem/question you have. Even a typo in documentation is a good thing to report!
+
+## License
+
+[MIT](http://opensource.org/licenses/MIT)
+
+Copyright (c) 2018-present, Michał Podwórny
